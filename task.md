@@ -13,7 +13,7 @@ Current repository state:
 - [~] Incident intake implemented
 - [~] Agent swarm implemented
 - [ ] Dashboard implemented
-- [ ] Supabase persistence implemented
+- [~] Supabase persistence implemented
 - [ ] Deployment completed
 - [ ] Demo recorded
 - [ ] Submission posts finalized
@@ -135,7 +135,7 @@ Verification note:
 - [x] Validate required server-side env vars before model or database calls.
 - [x] Never expose `CEREBRAS_API_KEY` to the browser.
 - [x] Keep all Cerebras calls inside server routes or server-only modules.
-- [ ] Keep Supabase service role usage server-only.
+- [x] Keep Supabase service role usage server-only.
 
 Acceptance criteria:
 
@@ -148,7 +148,7 @@ Verification note:
 - Added server-only env validation in `src/lib/env.ts`.
 - `GET /api/benchmark` with no `CEREBRAS_API_KEY` returns HTTP 503 and JSON: `{"ok":false,"error":"Cerebras is not configured...","missing":["CEREBRAS_API_KEY"]}`.
 - `rg "CEREBRAS_API_KEY|CEREBRAS_BASE_URL|CEREBRAS_MODEL|SUPABASE_SERVICE_ROLE_KEY" .next/static` returned no matches, confirming the client static bundle does not reference server secret names.
-- Supabase service-role handling remains open because database modules are not implemented yet.
+- Supabase service-role handling is server-only through `src/lib/db/supabase.ts`, which imports `server-only`, lazy-loads the admin client, and reads `SUPABASE_SERVICE_ROLE_KEY` only on the server.
 - `.env.example` was checked and contains placeholders only. A real key was moved to ignored `.env.local`; rotate that key before relying on it because it had been placed in `.env.example` during local work.
 
 ---
@@ -157,22 +157,22 @@ Verification note:
 
 ### 4.1 Supabase Schema
 
-- [ ] Add `supabase/schema.sql`.
-- [ ] Create `incidents` table:
+- [x] Add `supabase/schema.sql`.
+- [x] Create `incidents` table:
   - `id uuid primary key default gen_random_uuid()`
   - `title text not null`
   - `module text`
   - `status text default 'created'`
   - `severity text`
   - `created_at timestamptz default now()`
-- [ ] Create `incident_evidence` table:
+- [x] Create `incident_evidence` table:
   - `id uuid primary key default gen_random_uuid()`
   - `incident_id uuid references incidents(id) on delete cascade`
   - `type text not null`
   - `content text`
   - `file_url text`
   - `created_at timestamptz default now()`
-- [ ] Create `agent_runs` table:
+- [x] Create `agent_runs` table:
   - `id uuid primary key default gen_random_uuid()`
   - `incident_id uuid references incidents(id) on delete cascade`
   - `agent_name text not null`
@@ -184,33 +184,47 @@ Verification note:
   - `tokens_per_second numeric`
   - `output jsonb`
   - `created_at timestamptz default now()`
-- [ ] Create `speed_benchmarks` table for aggregate comparison data.
-- [ ] Create `demo_sessions` table for hackathon demo runs.
-- [ ] Add indexes for incident lookups and agent run history.
+- [x] Create `speed_benchmarks` table for aggregate comparison data.
+- [x] Create `demo_sessions` table for hackathon demo runs.
+- [x] Add indexes for incident lookups and agent run history.
 
 Acceptance criteria:
 
-- [ ] Schema can be applied to Supabase.
-- [ ] Incident creation stores core metadata.
-- [ ] Evidence records can be created and loaded by incident.
-- [ ] Agent outputs and metrics survive page refresh.
+- [~] Schema can be applied to Supabase.
+- [~] Incident creation stores core metadata.
+- [~] Evidence records can be created and loaded by incident.
+- [~] Agent outputs and metrics survive page refresh.
+
+Verification note:
+
+- Added `supabase/schema.sql` with `incidents`, `incident_evidence`, `agent_runs`, `speed_benchmarks`, `demo_sessions`, and lookup indexes.
+- Schema is syntactically ready for Supabase/Postgres, but has not been applied against a live Supabase project in this environment.
+- Persistence behavior is implemented in server code and build-verified; live insert/select verification is blocked until valid Supabase env values are supplied.
 
 ### 4.2 Database Client and Queries
 
-- [ ] Implement `lib/db/supabase.ts`.
-- [ ] Implement `lib/db/queries.ts`.
-- [ ] Provide functions for:
+- [x] Implement `lib/db/supabase.ts`.
+- [x] Implement `lib/db/queries.ts`.
+- [x] Provide functions for:
   - Creating an incident.
   - Saving evidence.
   - Creating/updating agent run records.
   - Loading a full incident dashboard.
   - Saving speed benchmark data.
-- [ ] Add a local fallback only if explicitly marked as a demo fallback. Do not present fallback data as persisted production data.
+- [x] Add a local fallback only if explicitly marked as a demo fallback. Do not present fallback data as persisted production data.
 
 Acceptance criteria:
 
 - [ ] Dashboard URL can be refreshed without losing completed outputs when Supabase is configured.
-- [ ] Database failures are visible in the UI/API response.
+- [x] Database failures are visible in the UI/API response.
+
+Verification note:
+
+- Added lazy server-only Supabase admin client in `src/lib/db/supabase.ts`.
+- Added `src/lib/db/queries.ts` functions for incident creation, evidence saving, agent-run saving, full incident loading, incident evidence reconstruction, and speed benchmark saving.
+- No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
+- `npm run typecheck` and `npm run lint` passed after the DB layer was added.
+- API smoke checks on `127.0.0.1:3000` confirmed invalid incident JSON returns HTTP 400, invalid evidence returns HTTP 400, and valid sample incident creation returns HTTP 503 with missing Supabase env fields when persistence is not configured.
 
 ---
 
@@ -255,7 +269,7 @@ Verification note:
 
 - Added typed sample evidence in `src/lib/samples/cart-summary-failure.ts`.
 - The intake UI loads this sample through `loadSample`, filling title, module, screenshot note, video note, logs, API response, DB snapshot, and git diff.
-- RCA shape is blocked until the real agent orchestrator and RCA agent are implemented.
+- RCA shape is blocked until the configured Cerebras model returns successful live responses; the orchestrator and RCA agent code now exist.
 
 ### 5.2 Additional Samples
 
@@ -270,13 +284,13 @@ Verification note:
 Acceptance criteria:
 
 - [x] All sample buttons populate evidence fields without page reload.
-- [!] Each sample can be run through the swarm.
+- [~] Each sample can be run through the swarm.
 
 Verification note:
 
 - Added `src/lib/samples/return-tracking-confirmed-qty.ts`, `src/lib/samples/order-tracking-items-missing.ts`, and `src/lib/samples/index.ts`.
 - The UI renders sample selector buttons for all three samples and updates client state without navigation.
-- Swarm execution remains blocked until the orchestrator route exists.
+- Each sample can be submitted to `/api/agents/run`; complete swarm output is blocked by the configured Cerebras model returning `404 status code (no body)`.
 
 ---
 
@@ -775,7 +789,7 @@ Expected output fields:
 - [~] Run RCA Agent after the first parallel group completes.
 - [~] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
 - [ ] Run Demo Narrator Agent last.
-- [ ] Persist each agent state and output.
+- [~] Persist each agent state and output.
 - [x] Capture partial outputs if one agent fails.
 - [x] Return structured final incident package.
 
@@ -795,7 +809,7 @@ Vision + Logs + API + DB
 Acceptance criteria:
 
 - [ ] Agents run in the intended dependency order.
-- [ ] Independent agents use `Promise.all` or equivalent parallel execution.
+- [x] Independent agents use `Promise.all` or equivalent parallel execution.
 - [ ] UI can display per-agent progress.
 - [ ] A single failed non-critical agent does not blank the whole dashboard.
 
@@ -822,41 +836,62 @@ Acceptance criteria:
 
 ### 11.1 Incident Routes
 
-- [ ] Implement `app/api/incidents/route.ts`.
-- [ ] Support incident creation.
-- [ ] Validate request payloads with Zod.
-- [ ] Save incident metadata and evidence.
-- [ ] Return incident id and status.
+- [x] Implement `app/api/incidents/route.ts`.
+- [x] Support incident creation.
+- [x] Validate request payloads with Zod.
+- [x] Save incident metadata and evidence.
+- [x] Return incident id and status.
 
 Acceptance criteria:
 
-- [ ] Valid sample incident creates an incident.
-- [ ] Invalid payload returns 400 with useful details.
+- [~] Valid sample incident creates an incident.
+- [x] Invalid payload returns 400 with useful details.
+
+Verification note:
+
+- Added `POST /api/incidents` with Zod validation and server-only Supabase persistence.
+- Invalid JSON and invalid evidence payloads return HTTP 400 with useful details.
+- Missing Supabase configuration returns HTTP 503; live creation is blocked until valid Supabase env values are provided.
+- Verified over HTTP: malformed JSON returned 400, `{ "title": "x" }` returned 400 with missing field issues, and a valid sample payload returned 503 listing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 
 ### 11.2 Agent Run Route
 
-- [ ] Implement `app/api/agents/run/route.ts`.
-- [ ] Accept incident id or raw evidence payload.
-- [ ] Run orchestrator.
-- [ ] Return final structured output.
-- [ ] Persist agent runs when database is configured.
-- [ ] Include speed metrics.
+- [x] Implement `app/api/agents/run/route.ts`.
+- [x] Accept incident id or raw evidence payload.
+- [x] Run orchestrator.
+- [x] Return final structured output.
+- [x] Persist agent runs when database is configured.
+- [x] Include speed metrics.
 
 Acceptance criteria:
 
-- [ ] "Run Incident Swarm" calls this route successfully.
-- [ ] Route returns a complete incident package for the primary sample.
+- [~] "Run Incident Swarm" calls this route successfully.
+- [!] Route returns a complete incident package for the primary sample.
+
+Verification note:
+
+- `/api/agents/run` now accepts raw incident evidence or `incident_id` / `incidentId`.
+- When Supabase is configured, raw evidence is saved before the swarm runs, agent runs are saved after execution, and completed swarms save aggregate Cerebras speed benchmark data.
+- When Supabase is not configured, persistence is explicitly reported as disabled and no fake durable storage is claimed.
+- Complete primary sample output remains blocked because the configured Cerebras model currently returns `404 status code (no body)`.
+- Verified over HTTP with a valid sample payload: `/api/agents/run` returned HTTP 502 with `persistence.enabled: false`, six agent runs, and a failed `log_agent` containing the live provider `404 status code (no body)` error.
 
 ### 11.3 Benchmark Route
 
-- [ ] Implement `app/api/benchmark/route.ts`.
-- [ ] Measure Cerebras latency and token throughput.
-- [ ] Optionally compare with baseline provider only when enabled and configured.
-- [ ] Never fabricate comparison data.
+- [x] Implement `app/api/benchmark/route.ts`.
+- [x] Measure Cerebras latency and token throughput.
+- [x] Optionally compare with baseline provider only when enabled and configured.
+- [x] Never fabricate comparison data.
 
 Acceptance criteria:
 
 - [ ] Speed metrics tab displays real metrics from agent calls or benchmark route.
+
+Verification note:
+
+- Added `src/app/api/benchmark/route.ts` in an earlier slice with real Cerebras latency, usage, and token-throughput reporting.
+- Missing Cerebras configuration returns HTTP 503, and provider failures return explicit errors instead of sample metrics.
+- A UI speed metrics tab remains open.
 
 ---
 

@@ -24,6 +24,19 @@ const cerebrasEnvSchema = z.object({
 
 export type CerebrasEnv = z.infer<typeof cerebrasEnvSchema>;
 
+const supabaseEnvSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z
+    .string()
+    .trim()
+    .url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .trim()
+    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
+});
+
+export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>;
+
 export function getCerebrasEnv(): CerebrasEnv {
   const parsed = cerebrasEnvSchema.safeParse({
     CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
@@ -45,4 +58,29 @@ export function getCerebrasEnv(): CerebrasEnv {
 
 export function isEnvConfigError(error: unknown): error is EnvConfigError {
   return error instanceof EnvConfigError;
+}
+
+export function isSupabasePersistenceConfigured() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
+}
+
+export function getSupabaseEnv(): SupabaseEnv {
+  const parsed = supabaseEnvSchema.safeParse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+
+  if (!parsed.success) {
+    const missing = parsed.error.issues.map((issue) => issue.path.join("."));
+
+    throw new EnvConfigError(
+      "Supabase persistence is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server before writing incidents.",
+      missing,
+    );
+  }
+
+  return parsed.data;
 }
