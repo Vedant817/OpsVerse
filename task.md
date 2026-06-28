@@ -9,7 +9,7 @@ Current repository state:
 - [x] Product idea captured in `Idea.md`
 - [x] Next.js application scaffold exists
 - [x] Runtime dependencies installed
-- [ ] Cerebras integration implemented
+- [~] Cerebras integration implemented
 - [ ] Incident intake implemented
 - [ ] Agent swarm implemented
 - [ ] Dashboard implemented
@@ -132,16 +132,23 @@ Verification note:
   - `BASELINE_PROVIDER_ENABLED=false`
   - `GEMINI_API_KEY=`
 - [x] Keep `.env.local` ignored by git.
-- [ ] Validate required server-side env vars before model or database calls.
-- [ ] Never expose `CEREBRAS_API_KEY` to the browser.
-- [ ] Keep all Cerebras calls inside server routes or server-only modules.
+- [x] Validate required server-side env vars before model or database calls.
+- [x] Never expose `CEREBRAS_API_KEY` to the browser.
+- [x] Keep all Cerebras calls inside server routes or server-only modules.
 - [ ] Keep Supabase service role usage server-only.
 
 Acceptance criteria:
 
-- [ ] Missing `CEREBRAS_API_KEY` produces a clear server error, not a silent fake result.
-- [ ] Client bundle does not reference `CEREBRAS_API_KEY`.
+- [x] Missing `CEREBRAS_API_KEY` produces a clear server error, not a silent fake result.
+- [x] Client bundle does not reference `CEREBRAS_API_KEY`.
 - [x] `.env.example` documents every required and optional variable.
+
+Verification note:
+
+- Added server-only env validation in `src/lib/env.ts`.
+- `GET /api/benchmark` with no `CEREBRAS_API_KEY` returns HTTP 503 and JSON: `{"ok":false,"error":"Cerebras is not configured...","missing":["CEREBRAS_API_KEY"]}`.
+- `rg "CEREBRAS_API_KEY|CEREBRAS_BASE_URL|CEREBRAS_MODEL|SUPABASE_SERVICE_ROLE_KEY" .next/static` returned no matches, confirming the client static bundle does not reference server secret names.
+- Supabase service-role handling remains open because database modules are not implemented yet.
 
 ---
 
@@ -427,29 +434,38 @@ Acceptance criteria:
 
 ### 8.1 Client Wrapper
 
-- [ ] Implement `lib/cerebras/client.ts`.
-- [ ] Use OpenAI-compatible client with:
+- [x] Implement `lib/cerebras/client.ts`.
+- [x] Use OpenAI-compatible client with:
   - `apiKey: process.env.CEREBRAS_API_KEY`
   - `baseURL: process.env.CEREBRAS_BASE_URL || "https://api.cerebras.ai/v1"`
   - `model: process.env.CEREBRAS_MODEL || "gemma-4-31b"`
-- [ ] Implement `runGemmaAgent`.
-- [ ] Measure:
+- [x] Implement `runGemmaAgent`.
+- [x] Measure:
   - start time
   - latency ms
   - usage
   - `time_info` if available
-- [ ] Support `reasoning_effort` values:
+- [x] Support `reasoning_effort` values:
   - none
   - low
   - medium
   - high
-- [ ] Use temperature `0.2` for stable incident outputs.
+- [x] Use temperature `0.2` for stable incident outputs.
 
 Acceptance criteria:
 
-- [ ] A test API route can call Gemma 4 and return content plus latency.
-- [ ] Errors include provider status/message where safe.
-- [ ] No server secret leaks into logs or client responses.
+- [!] A test API route can call Gemma 4 and return content plus latency.
+- [x] Errors include provider status/message where safe.
+- [x] No server secret leaks into logs or client responses.
+
+Verification note:
+
+- Added `src/lib/cerebras/client.ts` with a lazy OpenAI-compatible Cerebras client and `runGemmaAgent`.
+- Added `src/app/api/benchmark/route.ts` as the server-only test route.
+- The route returns real latency, usage, tokens/sec, `time_info`, model, content, and response id when live Cerebras is configured.
+- Live Gemma call is blocked in this environment because `CEREBRAS_API_KEY` is not present in the shell or `.env.local`.
+- Missing-key and invalid-JSON paths were verified with `curl`.
+- `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
 
 ### 8.2 Structured Output Schemas
 
@@ -916,11 +932,11 @@ Expected primary sample decision:
 
 Use this order unless a blocking dependency requires a small adjustment.
 
-- [ ] 1. Repository and git identity bootstrap.
-- [ ] 2. Next.js app scaffold.
-- [ ] 3. Environment validation.
-- [ ] 4. Cerebras wrapper working.
-- [ ] 5. Test API route calls Gemma 4 and returns response plus latency.
+- [x] 1. Repository and git identity bootstrap.
+- [x] 2. Next.js app scaffold.
+- [x] 3. Environment validation.
+- [!] 4. Cerebras wrapper working.
+- [!] 5. Test API route calls Gemma 4 and returns response plus latency.
 - [ ] 6. Sample incident data implemented.
 - [ ] 7. Landing page and incident upload shell.
 - [ ] 8. Load sample incident into form.
