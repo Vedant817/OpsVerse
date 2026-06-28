@@ -10,7 +10,7 @@ Current repository state:
 - [x] Next.js application scaffold exists
 - [x] Runtime dependencies installed
 - [~] Cerebras integration implemented
-- [ ] Incident intake implemented
+- [~] Incident intake implemented
 - [ ] Agent swarm implemented
 - [ ] Dashboard implemented
 - [ ] Supabase persistence implemented
@@ -217,53 +217,65 @@ Acceptance criteria:
 
 ### 5.1 Primary Demo Incident: Cart Summary Failure
 
-- [ ] Add `lib/samples/cart-summary-failure.ts`.
-- [ ] Include title: "Unable to move from cart to order summary."
-- [ ] Include module: "Direct Orders."
-- [ ] Include screenshot metadata or bundled image reference.
-- [ ] Include API response:
+- [x] Add `lib/samples/cart-summary-failure.ts`.
+- [x] Include title: "Unable to move from cart to order summary."
+- [x] Include module: "Direct Orders."
+- [x] Include screenshot metadata or bundled image reference.
+- [x] Include API response:
   - endpoint `/api/cart/summary`
   - status `422`
   - error `Validation failed`
   - breaking field `items[0].confirmedQty`
   - message `Expected number, received null`
-- [ ] Include backend logs:
+- [x] Include backend logs:
   - timestamp `2026-06-28T18:45:21Z`
   - service `order-service`
   - correlation id `req-8f32`
   - exception `CartSummaryValidationException`
   - cause `confirmedQty cannot be null for SKU 13321`
-- [ ] Include DB snapshot:
+- [x] Include DB snapshot:
   - `outlet_code`
   - `sku_code`
   - `available_qty`
   - `confirmed_qty`
   - `case_qty`
   - `piece_qty`
-- [ ] Include optional git diff:
+- [x] Include optional git diff:
   - old: `confirmedQty: item.confirmedQty ?? 0`
   - new: `confirmedQty: item.confirmedQty`
 
 Acceptance criteria:
 
-- [ ] "Load Demo Incident" fills every relevant form field.
-- [ ] Primary sample produces the expected RCA shape.
-- [ ] Data is clearly labeled synthetic.
+- [x] "Load Demo Incident" fills every relevant form field.
+- [!] Primary sample produces the expected RCA shape.
+- [x] Data is clearly labeled synthetic.
+
+Verification note:
+
+- Added typed sample evidence in `src/lib/samples/cart-summary-failure.ts`.
+- The intake UI loads this sample through `loadSample`, filling title, module, screenshot note, video note, logs, API response, DB snapshot, and git diff.
+- RCA shape is blocked until the real agent orchestrator and RCA agent are implemented.
 
 ### 5.2 Additional Samples
 
-- [ ] Add `lib/samples/return-tracking-confirmed-qty.ts`.
-- [ ] Add `lib/samples/order-tracking-items-missing.ts`.
-- [ ] Ensure each sample includes title, module, logs, API response, DB snapshot, and optional git diff.
-- [ ] Add sample selector buttons:
+- [x] Add `lib/samples/return-tracking-confirmed-qty.ts`.
+- [x] Add `lib/samples/order-tracking-items-missing.ts`.
+- [x] Ensure each sample includes title, module, logs, API response, DB snapshot, and optional git diff.
+- [x] Add sample selector buttons:
   - "Load Sample: Cart Summary Failure"
   - "Load Sample: Return Tracking Qty Bug"
   - "Load Sample: Order Tracking Items Missing"
 
 Acceptance criteria:
 
-- [ ] All sample buttons populate evidence fields without page reload.
-- [ ] Each sample can be run through the swarm.
+- [x] All sample buttons populate evidence fields without page reload.
+- [!] Each sample can be run through the swarm.
+
+Verification note:
+
+- Added `src/lib/samples/return-tracking-confirmed-qty.ts`, `src/lib/samples/order-tracking-items-missing.ts`, and `src/lib/samples/index.ts`.
+- The UI renders sample selector buttons for all three samples and updates client state without navigation.
+- Swarm execution remains blocked until the orchestrator route exists.
 
 ---
 
@@ -271,31 +283,38 @@ Acceptance criteria:
 
 ### 6.1 Landing Page
 
-- [ ] Implement `app/page.tsx`.
-- [ ] Include product name as the primary first-viewport signal.
-- [ ] Include hero copy:
+- [x] Implement `app/page.tsx`.
+- [x] Include product name as the primary first-viewport signal.
+- [~] Include hero copy:
   - "Multimodal Incident Swarm for Enterprise Apps"
   - "Upload a screenshot, logs, API response, and DB snapshot. Gemma 4 agents on Cerebras turn chaos into RCA, tests, and release decisions in seconds."
-- [ ] Add primary actions:
+- [x] Add primary actions:
   - Run Demo Incident
   - Upload Evidence
   - View Architecture
-- [ ] Show feature areas:
+- [x] Show feature areas:
   - Multimodal RCA
   - Agent Swarm
   - Release-Ready Output
-- [ ] Make the first screen a usable product entry point, not only a marketing page.
+- [x] Make the first screen a usable product entry point, not only a marketing page.
 
 Acceptance criteria:
 
-- [ ] Clicking "Run Demo Incident" loads the demo path.
-- [ ] Clicking "Upload Evidence" opens the incident intake flow.
-- [ ] Layout is responsive on desktop and mobile.
+- [x] Clicking "Run Demo Incident" loads the demo path.
+- [x] Clicking "Upload Evidence" opens the incident intake flow.
+- [x] Layout is responsive on desktop and mobile.
+
+Verification note:
+
+- Replaced the default Next.js starter page with the OpsVerse intake workspace in `src/app/page.tsx`.
+- The product headline is present; the supporting hero copy was adjusted to avoid claiming the full swarm works before the orchestrator exists.
+- `curl -s http://127.0.0.1:3000` showed `OpsVerse`, `Run Demo Incident`, all three sample names, and `Incident Intake`.
+- Full browser click/responsive verification was not run because `agent-browser` and Playwright are not installed in this environment.
 
 ### 6.2 Incident Upload Page
 
-- [ ] Implement `app/incident/page.tsx`.
-- [ ] Add fields:
+- [x] Implement `app/incident/page.tsx`.
+- [x] Add fields:
   - Incident title
   - Module/service
   - Screenshot upload
@@ -304,17 +323,24 @@ Acceptance criteria:
   - API response textarea
   - DB snapshot textarea
   - Git diff textarea
-- [ ] Add validation with useful error messages.
-- [ ] Add sample loading buttons.
-- [ ] Add "Run Incident Swarm" action.
-- [ ] Prevent empty submissions unless a sample incident is loaded.
-- [ ] Show clear handling for optional evidence.
+- [x] Add validation with useful error messages.
+- [x] Add sample loading buttons.
+- [~] Add "Run Incident Swarm" action.
+- [x] Prevent empty submissions unless a sample incident is loaded.
+- [x] Show clear handling for optional evidence.
 
 Acceptance criteria:
 
-- [ ] User can manually paste logs/API/DB evidence.
-- [ ] User can upload a screenshot.
-- [ ] User can run the swarm from sample or manual evidence.
+- [x] User can manually paste logs/API/DB evidence.
+- [x] User can upload a screenshot.
+- [!] User can run the swarm from sample or manual evidence.
+
+Verification note:
+
+- Added reusable client component `src/components/evidence-uploader.tsx` and route `src/app/incident/page.tsx`.
+- The button validates the evidence package and explicitly states that the orchestrator is not implemented yet; it does not fake swarm output.
+- `curl -s http://127.0.0.1:3000/incident` showed `OpsVerse`, `Synthetic evidence only`, all three sample names, and `Run Incident Swarm`.
+- Real swarm execution is blocked until the agent orchestrator route is implemented.
 
 ### 6.3 Swarm Execution Page
 
@@ -937,9 +963,9 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [x] 3. Environment validation.
 - [!] 4. Cerebras wrapper working.
 - [!] 5. Test API route calls Gemma 4 and returns response plus latency.
-- [ ] 6. Sample incident data implemented.
-- [ ] 7. Landing page and incident upload shell.
-- [ ] 8. Load sample incident into form.
+- [x] 6. Sample incident data implemented.
+- [x] 7. Landing page and incident upload shell.
+- [x] 8. Load sample incident into form.
 - [ ] 9. Core text agents implemented: Log, API, DB.
 - [ ] 10. RCA Agent implemented.
 - [ ] 11. Test Agent implemented.
