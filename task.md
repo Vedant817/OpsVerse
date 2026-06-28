@@ -11,7 +11,7 @@ Current repository state:
 - [x] Runtime dependencies installed
 - [~] Cerebras integration implemented
 - [~] Incident intake implemented
-- [ ] Agent swarm implemented
+- [~] Agent swarm implemented
 - [ ] Dashboard implemented
 - [ ] Supabase persistence implemented
 - [ ] Deployment completed
@@ -149,6 +149,7 @@ Verification note:
 - `GET /api/benchmark` with no `CEREBRAS_API_KEY` returns HTTP 503 and JSON: `{"ok":false,"error":"Cerebras is not configured...","missing":["CEREBRAS_API_KEY"]}`.
 - `rg "CEREBRAS_API_KEY|CEREBRAS_BASE_URL|CEREBRAS_MODEL|SUPABASE_SERVICE_ROLE_KEY" .next/static` returned no matches, confirming the client static bundle does not reference server secret names.
 - Supabase service-role handling remains open because database modules are not implemented yet.
+- `.env.example` was checked and contains placeholders only. A real key was moved to ignored `.env.local`; rotate that key before relying on it because it had been placed in `.env.example` during local work.
 
 ---
 
@@ -495,8 +496,8 @@ Verification note:
 
 ### 8.2 Structured Output Schemas
 
-- [ ] Implement `lib/cerebras/schemas.ts`.
-- [ ] Define Zod schemas for:
+- [x] Implement `lib/cerebras/schemas.ts`.
+- [x] Define Zod schemas for:
   - Intake output
   - Vision output
   - Log output
@@ -507,20 +508,27 @@ Verification note:
   - Release risk output
   - Demo narrator output
   - Final incident package
-- [ ] Validate model responses.
-- [ ] Add repair/fallback path for malformed JSON.
-- [ ] Surface schema validation failures as agent failures.
+- [x] Validate model responses.
+- [x] Add repair/fallback path for malformed JSON.
+- [x] Surface schema validation failures as agent failures.
 
 Acceptance criteria:
 
-- [ ] Valid model JSON is parsed into typed objects.
-- [ ] Invalid JSON does not crash the app.
-- [ ] UI shows failed agent state when validation fails.
+- [!] Valid model JSON is parsed into typed objects.
+- [x] Invalid JSON does not crash the app.
+- [x] UI shows failed agent state when validation fails.
+
+Verification note:
+
+- Added `src/lib/cerebras/schemas.ts` with schemas for intake, vision, log, API, DB, RCA, regression test, release risk, narrator, agent runs, and final incident package.
+- Added schema validation in `src/lib/agents/structured-agent.ts`.
+- Malformed/non-schema model output is returned as a failed agent run instead of guessed output.
+- Live valid-model JSON parsing is blocked because the configured Cerebras model currently returns `404 status code (no body)`.
 
 ### 8.3 Prompt Templates
 
-- [ ] Implement `lib/cerebras/prompts.ts`.
-- [ ] Include prompts for:
+- [x] Implement `lib/cerebras/prompts.ts`.
+- [~] Include prompts for:
   - Vision Triage Agent
   - Log Analysis Agent
   - API Contract Agent
@@ -529,14 +537,20 @@ Acceptance criteria:
   - Regression Test Agent
   - Release Risk Agent
   - Demo Narrator Agent
-- [ ] Require "Return only valid JSON" in agent prompts.
-- [ ] Keep prompts grounded in provided evidence.
-- [ ] Tell agents to identify missing evidence instead of inventing facts.
+- [x] Require "Return only valid JSON" in agent prompts.
+- [x] Keep prompts grounded in provided evidence.
+- [x] Tell agents to identify missing evidence instead of inventing facts.
 
 Acceptance criteria:
 
-- [ ] Each prompt produces output matching its schema in a live or mocked test.
-- [ ] Outputs include confidence where required.
+- [!] Each prompt produces output matching its schema in a live or mocked test.
+- [!] Outputs include confidence where required.
+
+Verification note:
+
+- Added prompts in `src/lib/cerebras/prompts.ts` for Log, API, DB, RCA, Regression Test, and Release Risk agents.
+- Vision and Narrator schemas exist, but their runnable prompts/agents remain future work.
+- Live prompt verification is blocked by Cerebras returning 404 for the configured model.
 
 ### 8.4 Image Handling
 
@@ -605,9 +619,9 @@ Expected output fields:
 
 ### 9.3 Log Analysis Agent
 
-- [ ] Implement `lib/agents/log-agent.ts`.
-- [ ] Analyze backend logs.
-- [ ] Extract:
+- [x] Implement `lib/agents/log-agent.ts`.
+- [~] Analyze backend logs.
+- [~] Extract:
   - primary error
   - failing service
   - correlation ID
@@ -626,9 +640,9 @@ Expected output fields:
 
 ### 9.4 API Contract Agent
 
-- [ ] Implement `lib/agents/api-agent.ts`.
-- [ ] Analyze request and response JSON.
-- [ ] Extract:
+- [x] Implement `lib/agents/api-agent.ts`.
+- [~] Analyze request and response JSON.
+- [~] Extract:
   - endpoint
   - HTTP status
   - contract violation
@@ -648,9 +662,9 @@ Expected output fields:
 
 ### 9.5 DB Consistency Agent
 
-- [ ] Implement `lib/agents/db-agent.ts`.
-- [ ] Analyze DB snapshot.
-- [ ] Identify:
+- [x] Implement `lib/agents/db-agent.ts`.
+- [~] Analyze DB snapshot.
+- [~] Identify:
   - suspicious tables
   - inconsistent fields
   - missing values
@@ -665,12 +679,12 @@ Expected output fields:
 
 ### 9.6 Root Cause Agent
 
-- [ ] Implement `lib/agents/rca-agent.ts`.
-- [ ] Combine Vision, Log, API, and DB outputs.
-- [ ] Produce three ranked root-cause hypotheses.
-- [ ] Explain evidence supporting each hypothesis.
-- [ ] Identify missing evidence.
-- [ ] Produce final RCA summary.
+- [x] Implement `lib/agents/rca-agent.ts`.
+- [~] Combine Vision, Log, API, and DB outputs.
+- [~] Produce three ranked root-cause hypotheses.
+- [~] Explain evidence supporting each hypothesis.
+- [~] Identify missing evidence.
+- [~] Produce final RCA summary.
 
 Expected output fields:
 
@@ -681,8 +695,8 @@ Expected output fields:
 
 ### 9.7 Regression Test Agent
 
-- [ ] Implement `lib/agents/test-agent.ts`.
-- [ ] Generate:
+- [x] Implement `lib/agents/test-agent.ts`.
+- [~] Generate:
   - manual QA reproduction steps
   - SQL validation checks
   - API regression test
@@ -699,8 +713,8 @@ Expected output fields:
 
 ### 9.8 Release Risk Agent
 
-- [ ] Implement `lib/agents/release-agent.ts`.
-- [ ] Decide release gate:
+- [x] Implement `lib/agents/release-agent.ts`.
+- [~] Decide release gate:
   - PASS
   - WARN
   - BLOCK
@@ -719,6 +733,14 @@ Expected output fields:
 - [ ] `reason`
 - [ ] `must_fix_before_release`
 - [ ] `recommended_tests`
+
+Verification note:
+
+- Added server-only text agents under `src/lib/agents`.
+- Added `src/lib/agents/orchestrator.ts` and `src/app/api/agents/run/route.ts`.
+- `/api/agents/run` validates incident evidence, runs Log/API/DB agents in parallel, gates RCA/Test/Release on dependencies, and returns partial failed agent runs when provider calls fail.
+- With `.env.local` loaded, the configured model returns `404 status code (no body)` from Cerebras, so the route correctly returns HTTP 502 with failed agent diagnostics instead of fake RCA output.
+- The UI Run button now calls `/api/agents/run` and displays the real structured success/failure payload.
 
 ### 9.9 Demo Narrator Agent
 
@@ -744,18 +766,18 @@ Expected output fields:
 
 ### 10.1 Orchestrator
 
-- [ ] Implement `lib/agents/orchestrator.ts`.
-- [ ] Run independent agents in parallel:
+- [x] Implement `lib/agents/orchestrator.ts`.
+- [~] Run independent agents in parallel:
   - Vision Agent
   - Log Agent
   - API Agent
   - DB Agent
-- [ ] Run RCA Agent after the first parallel group completes.
-- [ ] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
+- [~] Run RCA Agent after the first parallel group completes.
+- [~] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
 - [ ] Run Demo Narrator Agent last.
 - [ ] Persist each agent state and output.
-- [ ] Capture partial outputs if one agent fails.
-- [ ] Return structured final incident package.
+- [x] Capture partial outputs if one agent fails.
+- [x] Return structured final incident package.
 
 Expected flow:
 
@@ -966,12 +988,12 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [x] 6. Sample incident data implemented.
 - [x] 7. Landing page and incident upload shell.
 - [x] 8. Load sample incident into form.
-- [ ] 9. Core text agents implemented: Log, API, DB.
-- [ ] 10. RCA Agent implemented.
-- [ ] 11. Test Agent implemented.
-- [ ] 12. Release Agent implemented.
-- [ ] 13. Orchestrator implemented.
-- [ ] 14. Run Swarm button produces structured outputs.
+- [!] 9. Core text agents implemented: Log, API, DB.
+- [!] 10. RCA Agent implemented.
+- [!] 11. Test Agent implemented.
+- [!] 12. Release Agent implemented.
+- [~] 13. Orchestrator implemented.
+- [~] 14. Run Swarm button produces structured outputs.
 - [ ] 15. Result tabs display RCA, Jira bug, tests, and release gate.
 - [ ] 16. Multimodal screenshot upload and Vision Agent.
 - [ ] 17. Agent graph and progress UI.

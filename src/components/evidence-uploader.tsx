@@ -93,8 +93,10 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [showArchitecture, setShowArchitecture] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [submitState, setSubmitState] = useState<
-    "idle" | "validating" | "ready"
+    "idle" | "validating" | "running" | "complete" | "failed"
   >("idle");
+  const [runResult, setRunResult] = useState<unknown>(null);
+  const [runError, setRunError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const filledEvidenceCount = useMemo(
@@ -119,6 +121,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setVideoName(`${sample.id}-frames.synthetic`);
     setValidationErrors([]);
     setSubmitState("idle");
+    setRunResult(null);
+    setRunError("");
   }
 
   function resetForm() {
@@ -128,6 +132,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setVideoName("");
     setValidationErrors([]);
     setSubmitState("idle");
+    setRunResult(null);
+    setRunError("");
   }
 
   function focusForm() {
@@ -147,9 +153,11 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     return errors;
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitState("validating");
+    setRunResult(null);
+    setRunError("");
 
     const errors = validateForm();
     setValidationErrors(errors);
@@ -159,7 +167,43 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
       return;
     }
 
-    setSubmitState("ready");
+    setSubmitState("running");
+
+    try {
+      const response = await fetch("/api/agents/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Incident swarm request failed.";
+
+        setRunError(message);
+        setRunResult(payload);
+        setSubmitState("failed");
+        return;
+      }
+
+      setRunResult(payload);
+      setSubmitState("complete");
+    } catch (error) {
+      setRunError(
+        error instanceof Error
+          ? error.message
+          : "Incident swarm request failed.",
+      );
+      setSubmitState("failed");
+    }
   }
 
   return (
@@ -186,9 +230,9 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                 Multimodal Incident Swarm for Enterprise Apps
               </p>
               <p className="max-w-3xl text-base leading-7 text-[#c9c6ba]">
-                Upload a screenshot, logs, API response, and DB snapshot. This
-                build keeps intake evidence real and holds swarm output until
-                the Gemma 4 agent orchestrator is connected.
+                Upload a screenshot, logs, API response, and DB snapshot. The
+                server runs the text-agent swarm through Cerebras and returns
+                structured RCA, test, and release-gate output.
               </p>
             </div>
 
@@ -285,7 +329,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-[#625d52]">Swarm</dt>
-                <dd className="font-mono text-[#9a3412]">not wired</dd>
+                <dd className="font-mono text-[#155e57]">server route</dd>
               </div>
             </dl>
           </div>
@@ -448,17 +492,34 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                 </div>
               ) : null}
 
-              {submitState === "ready" ? (
+              {submitState === "complete" ? (
                 <div className="rounded border border-[#b8d9d4] bg-[#effaf8] p-4 text-sm text-[#155e57]">
                   <div className="flex items-center gap-2 font-semibold">
                     <ClipboardCheck size={17} aria-hidden="true" />
-                    Evidence package validated
+                    Incident swarm complete
                   </div>
                   <p className="mt-2 leading-6">
-                    The incident intake is ready for the agent orchestrator. No
-                    swarm output is shown until the real orchestrator task is
-                    implemented.
+                    The server returned structured agent output. This panel is
+                    intentionally raw until the results dashboard is built.
                   </p>
+                  <pre className="mt-3 max-h-96 overflow-auto rounded bg-[#082f2b] p-3 text-xs leading-5 text-[#dff7f3]">
+                    {JSON.stringify(runResult, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+
+              {submitState === "failed" ? (
+                <div className="rounded border border-[#f0b89d] bg-[#fff4ed] p-4 text-sm text-[#9a3412]">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertTriangle size={17} aria-hidden="true" />
+                    Incident swarm failed
+                  </div>
+                  <p className="mt-2 leading-6">{runError}</p>
+                  {runResult ? (
+                    <pre className="mt-3 max-h-72 overflow-auto rounded bg-[#3b1f16] p-3 text-xs leading-5 text-[#ffe7dd]">
+                      {JSON.stringify(runResult, null, 2)}
+                    </pre>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -472,12 +533,12 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                   type="submit"
                   className="inline-flex h-11 items-center gap-2 rounded bg-[#116d6e] px-4 text-sm font-semibold text-white transition hover:bg-[#0d5d5f]"
                 >
-                  {submitState === "validating" ? (
+                  {submitState === "validating" || submitState === "running" ? (
                     <Loader2 className="animate-spin" size={17} aria-hidden="true" />
                   ) : (
                     <Play size={17} aria-hidden="true" />
                   )}
-                  Run Incident Swarm
+                  {submitState === "running" ? "Running Swarm" : "Run Incident Swarm"}
                 </button>
               </div>
             </div>
