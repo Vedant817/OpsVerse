@@ -15,6 +15,8 @@ const agents = [
 
 type AgentGraphProps = {
   result?: FinalIncidentPackage | null;
+  runs?: AgentRun[];
+  activeAgents?: string[];
   isRunning?: boolean;
 };
 
@@ -56,13 +58,24 @@ function previewFromRun(run?: AgentRun) {
   return JSON.stringify(output).slice(0, 180);
 }
 
-function statusForAgent(agentName: string, run: AgentRun | undefined, isRunning: boolean) {
+function statusForAgent(
+  agentName: string,
+  run: AgentRun | undefined,
+  activeAgents: Set<string>,
+  isRunning: boolean,
+  useInitialRunningFallback: boolean,
+) {
   if (run) {
     return run.status;
   }
 
+  if (activeAgents.has(agentName)) {
+    return "running";
+  }
+
   if (
     isRunning &&
+    useInitialRunningFallback &&
     ["intake_agent", "vision_agent", "log_agent", "api_agent", "db_agent"].includes(
       agentName,
     )
@@ -73,8 +86,16 @@ function statusForAgent(agentName: string, run: AgentRun | undefined, isRunning:
   return "pending";
 }
 
-export function AgentGraph({ result, isRunning = false }: AgentGraphProps) {
-  const runs = new Map(result?.agent_runs.map((run) => [run.agent_name, run]));
+export function AgentGraph({
+  result,
+  runs: streamedRuns,
+  activeAgents,
+  isRunning = false,
+}: AgentGraphProps) {
+  const recordedRuns = streamedRuns ?? result?.agent_runs ?? [];
+  const activeAgentSet = new Set(activeAgents ?? []);
+  const useInitialRunningFallback = activeAgents === undefined;
+  const runs = new Map(recordedRuns.map((run) => [run.agent_name, run]));
 
   return (
     <section className="rounded border border-[#d6d1bf] bg-[#fdfcf7] p-5">
@@ -87,7 +108,7 @@ export function AgentGraph({ result, isRunning = false }: AgentGraphProps) {
           </p>
         </div>
         <div className="font-mono text-xs text-[#625d52]">
-          {result?.agent_runs.length ?? 0}/9 runs recorded
+          {recordedRuns.length}/9 runs recorded
         </div>
       </div>
 
@@ -97,7 +118,9 @@ export function AgentGraph({ result, isRunning = false }: AgentGraphProps) {
           const status = statusForAgent(
             agent.name,
             run,
+            activeAgentSet,
             isRunning,
+            useInitialRunningFallback,
           ) as AgentDisplayStatus;
 
           return (

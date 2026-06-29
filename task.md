@@ -390,10 +390,11 @@ Acceptance criteria:
 Verification note:
 
 - Added `src/components/agent-card.tsx` and `src/components/agent-graph.tsx`.
-- The intake flow renders running state while `/api/agents/run` is in flight, then renders real completed/failed/pending nodes from the route payload.
-- Vision and Narrator are shown as pending until their agents exist; Log/API/DB/RCA/Test/Release render from real route data.
+- The intake flow now calls `/api/agents/stream` and renders real `agent_started`, `agent_completed`, and final `swarm_completed` events while the run is in flight.
+- Vision, Log, API, DB, RCA, Test, Release, and Narrator render from actual streamed runs or final route data.
 - RCA dependency gating is implemented for Log/API/DB and for Vision when real image/frame evidence is supplied.
 - Browser smoke with local Chrome verified the demo sample submission renders `Incident swarm failed`, `Agent Execution`, `Log Agent`, and result tabs without a Next error overlay. The only console error was the expected HTTP 502 from the live provider failure.
+- HTTP SSE smoke verified `/api/agents/stream` emits started/completed events for the live run path and returns a final structured package without static outputs.
 
 ### 6.4 Results Dashboard
 
@@ -877,20 +878,30 @@ Acceptance criteria:
 
 ### 10.2 Streaming
 
-- [ ] Implement `app/api/agents/stream/route.ts` if streaming is used.
-- [ ] Stream state transitions to the UI.
-- [ ] Include:
+- [x] Implement `app/api/agents/stream/route.ts` if streaming is used.
+- [x] Stream state transitions to the UI.
+- [~] Include:
   - agent started
   - agent completed
   - agent failed
   - metrics updated
   - final package completed
-- [ ] Fall back to polling if streaming is not implemented in MVP.
+- [x] Fall back to polling if streaming is not implemented in MVP.
 
 Acceptance criteria:
 
-- [ ] User sees progress while the swarm runs.
-- [ ] Long-running calls do not appear frozen.
+- [~] User sees progress while the swarm runs.
+- [~] Long-running calls do not appear frozen.
+
+Verification note:
+
+- Added stream-aware orchestration through `runIncidentSwarmWithEvents`, preserving the existing JSON route behavior.
+- Added `POST /api/agents/stream`, which emits SSE events for `agent_started`, `agent_completed`, `swarm_completed`, and `swarm_error`.
+- The stream route uses the same validation, image checks, optional Supabase persistence, dependency gating, and final package schema as `/api/agents/run`.
+- The intake UI now posts to `/api/agents/stream`, reads the response body, updates active agent states from real SSE events, and renders the final package when `swarm_completed` arrives.
+- Agent metrics are included on `agent_completed` events when provider responses include metrics; there is no separate `metrics_updated` event yet.
+- Polling fallback is not needed for the MVP because SSE is implemented as the primary progress path; if a target host cannot support streamed route responses, a polling route can be added later.
+- HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure still appears as failed agent output with `404 status code (no body)`.
 
 ---
 
@@ -936,7 +947,7 @@ Verification note:
 - When Supabase is configured, raw evidence is saved before the swarm runs, agent runs are saved after execution, and completed swarms save aggregate Cerebras speed benchmark data.
 - When Supabase is not configured, persistence is explicitly reported as disabled and no fake durable storage is claimed.
 - Complete primary sample output remains blocked because the configured Cerebras model currently returns `404 status code (no body)`.
-- Verified over HTTP with a valid sample payload: `/api/agents/run` returned HTTP 502 with `persistence.enabled: false`, six agent runs, and a failed `log_agent` containing the live provider `404 status code (no body)` error.
+- Verified over HTTP with a valid sample payload after the stream refactor: `/api/agents/run` still returned HTTP 502 with `persistence.enabled: false`, nine agent runs from Intake through Narrator, and model-dependent agents containing the live provider `404 status code (no body)` error.
 
 ### 11.3 Benchmark Route
 
@@ -1316,7 +1327,7 @@ Verification note:
 
 - Added `npm run verify:local` for repeatable local quality checks.
 - Added `npm run verify:deployment` for repeatable deployment readiness checks.
-- `npm run verify:local` passed: typecheck, lint, Next.js production build, and `npm audit --audit-level=moderate`.
+- `npm run verify:local` passed after the streaming slice: typecheck, lint, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
 - Quality gates are still blocked from full `[x]` because the configured Cerebras model returns provider `404 status code (no body)`, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 

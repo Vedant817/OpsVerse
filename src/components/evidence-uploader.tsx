@@ -21,7 +21,7 @@ import {
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { AgentGraph } from "@/components/agent-graph";
 import { ResultTabs } from "@/components/result-tabs";
-import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
+import type { AgentRun, FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import type { IncidentSample } from "@/lib/samples";
 
 type EvidenceFormState = {
@@ -55,6 +55,30 @@ type SwarmApiResponse = {
     error: string | null;
   };
 };
+
+type SwarmStreamEvent =
+  | {
+      type: "agent_started";
+      agent_name: string;
+    }
+  | {
+      type: "agent_completed";
+      run: AgentRun;
+    }
+  | {
+      type: "swarm_completed";
+      ok: boolean;
+      error: string | null;
+      result: FinalIncidentPackage;
+      persistence?: SwarmApiResponse["persistence"];
+    }
+  | {
+      type: "swarm_error";
+      error: string;
+      detail?: string;
+      missing?: string[];
+      issues?: Array<{ path: string; message: string }>;
+    };
 
 const emptyForm: EvidenceFormState = {
   title: "",
@@ -133,6 +157,46 @@ function formatFieldName(field: keyof EvidenceFormState) {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function replaceAgentRun(runs: AgentRun[], nextRun: AgentRun) {
+  const existingIndex = runs.findIndex(
+    (run) => run.agent_name === nextRun.agent_name,
+  );
+
+  if (existingIndex === -1) {
+    return [...runs, nextRun];
+  }
+
+  return runs.map((run, index) => (index === existingIndex ? nextRun : run));
+}
+
+function streamErrorMessage(event: Extract<SwarmStreamEvent, { type: "swarm_error" }>) {
+  if (event.issues?.length) {
+    return `${event.error} ${event.issues
+      .map((issue) => `${issue.path}: ${issue.message}`)
+      .join("; ")}`;
+  }
+
+  if (event.missing?.length) {
+    return `${event.error} Missing: ${event.missing.join(", ")}`;
+  }
+
+  return event.detail ? `${event.error} ${event.detail}` : event.error;
+}
+
+function parseSseBlock(block: string) {
+  const data = block
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+
+  if (!data) {
+    return null;
+  }
+
+  return JSON.parse(data) as SwarmStreamEvent;
+}
+
 export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [form, setForm] = useState<EvidenceFormState>(emptyForm);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
@@ -146,6 +210,9 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   >("idle");
   const [runResult, setRunResult] = useState<SwarmApiResponse | null>(null);
   const [runError, setRunError] = useState("");
+  const [streamRuns, setStreamRuns] = useState<AgentRun[]>([]);
+  const [activeAgents, setActiveAgents] = useState<string[]>([]);
+  const [streamStatus, setStreamStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const filledEvidenceCount = useMemo(
@@ -174,6 +241,9 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setSubmitState("idle");
     setRunResult(null);
     setRunError("");
+    setStreamRuns([]);
+    setActiveAgents([]);
+    setStreamStatus("");
   }
 
   function resetForm() {
@@ -186,6 +256,9 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setSubmitState("idle");
     setRunResult(null);
     setRunError("");
+    setStreamRuns([]);
+    setActiveAgents([]);
+    setStreamStatus("");
   }
 
   function focusForm() {
@@ -265,43 +338,118 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setSubmitState("validating");
     setRunResult(null);
     setRunError("");
+    setStreamRuns([]);
+    setActiveAgents([]);
+    setStreamStatus("Validating evidence package.");
 
     const errors = validateForm();
     setValidationErrors(errors);
 
     if (errors.length > 0) {
       setSubmitState("idle");
+      setStreamStatus("");
       return;
     }
 
     setSubmitState("running");
+    setStreamStatus("Opening live swarm stream.");
 
     try {
-      const response = await fetch("/api/agents/run", {
+      const response = await fetch("/api/agents/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(form),
       });
-      const payload = (await response.json()) as SwarmApiResponse;
+
+      if (!response.body) {
+        throw new Error("Incident swarm stream did not return a readable body.");
+      }
 
       if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Incident swarm request failed.";
+        const payload = (await response.json()) as Partial<SwarmApiResponse>;
+        const message = payload.error ?? "Incident swarm request failed.";
 
         setRunError(message);
-        setRunResult(payload);
+        setRunResult({
+          ok: false,
+          error: message,
+          result: payload.result,
+          persistence: payload.persistence,
+        });
         setSubmitState("failed");
         return;
       }
 
-      setRunResult(payload);
+      const decoder = new TextDecoder();
+      const reader = response.body.getReader();
+      let buffer = "";
+      let finalPayload: SwarmApiResponse | null = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+
+        const blocks = buffer.split(/\n\n|\r\n\r\n/);
+        buffer = blocks.pop() ?? "";
+
+        for (const block of blocks) {
+          const streamEvent = parseSseBlock(block);
+
+          if (!streamEvent) {
+            continue;
+          }
+
+          if (streamEvent.type === "agent_started") {
+            setActiveAgents((current) =>
+              current.includes(streamEvent.agent_name)
+                ? current
+                : [...current, streamEvent.agent_name],
+            );
+            setStreamStatus(`${streamEvent.agent_name} started.`);
+          } else if (streamEvent.type === "agent_completed") {
+            setActiveAgents((current) =>
+              current.filter((agentName) => agentName !== streamEvent.run.agent_name),
+            );
+            setStreamRuns((current) => replaceAgentRun(current, streamEvent.run));
+            setStreamStatus(
+              `${streamEvent.run.agent_name} ${streamEvent.run.status}.`,
+            );
+          } else if (streamEvent.type === "swarm_completed") {
+            finalPayload = {
+              ok: streamEvent.ok,
+              error: streamEvent.error,
+              result: streamEvent.result,
+              persistence: streamEvent.persistence,
+            };
+            setRunResult(finalPayload);
+            setStreamRuns(streamEvent.result.agent_runs);
+            setActiveAgents([]);
+            setStreamStatus("Incident swarm stream closed.");
+          } else if (streamEvent.type === "swarm_error") {
+            throw new Error(streamErrorMessage(streamEvent));
+          }
+        }
+
+        if (done) {
+          break;
+        }
+      }
+
+      if (!finalPayload) {
+        throw new Error("Incident swarm stream ended before a final package arrived.");
+      }
+
+      if (!finalPayload.ok) {
+        setRunError(
+          finalPayload.error ??
+            "Incident swarm did not complete. Inspect agent runs for details.",
+        );
+        setSubmitState("failed");
+        return;
+      }
+
       setSubmitState("complete");
     } catch (error) {
       setRunError(
@@ -309,6 +457,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
           ? error.message
           : "Incident swarm request failed.",
       );
+      setActiveAgents([]);
       setSubmitState("failed");
     }
   }
@@ -436,7 +585,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-[#625d52]">Swarm</dt>
-                <dd className="font-mono text-[#155e57]">server route</dd>
+                <dd className="font-mono text-[#155e57]">SSE route</dd>
               </div>
             </dl>
           </div>
@@ -606,8 +755,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                     Incident swarm complete
                   </div>
                   <p className="mt-2 leading-6">
-                    The server returned structured agent output from the live
-                    route.
+                    The server streamed real agent events and returned structured
+                    output from the live route.
                   </p>
                   {runResult?.persistence?.incident_id ? (
                     <a
@@ -617,6 +766,16 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                       Open persisted dashboard
                     </a>
                   ) : null}
+                </div>
+              ) : null}
+
+              {submitState === "running" && streamStatus ? (
+                <div className="rounded border border-[#b9c9e8] bg-[#eef4ff] p-4 text-sm text-[#244f86]">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Loader2 className="animate-spin" size={17} aria-hidden="true" />
+                    Live swarm stream
+                  </div>
+                  <p className="mt-2 font-mono text-xs">{streamStatus}</p>
                 </div>
               ) : null}
 
@@ -648,6 +807,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                 </p>
                 <button
                   type="submit"
+                  disabled={submitState === "running" || submitState === "validating"}
                   className="inline-flex h-11 items-center gap-2 rounded bg-[#116d6e] px-4 text-sm font-semibold text-white transition hover:bg-[#0d5d5f]"
                 >
                   {submitState === "validating" || submitState === "running" ? (
@@ -664,6 +824,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
           {submitState === "running" || runPackage ? (
             <AgentGraph
               result={runPackage}
+              runs={runPackage ? undefined : streamRuns}
+              activeAgents={activeAgents}
               isRunning={submitState === "running"}
             />
           ) : null}

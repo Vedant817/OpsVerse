@@ -18,6 +18,18 @@ import { runReleaseAgent } from "./release-agent";
 import { runTestAgent } from "./test-agent";
 import { runVisionAgent } from "./vision-agent";
 
+export type SwarmStreamEvent =
+  | {
+      type: "agent_started";
+      agent_name: string;
+    }
+  | {
+      type: "agent_completed";
+      run: AgentRun;
+    };
+
+type SwarmEventHandler = (event: SwarmStreamEvent) => void | Promise<void>;
+
 function dependencyFailure(agentName: string, message: string): AgentRun {
   return {
     agent_name: agentName,
@@ -32,26 +44,97 @@ function hasImageEvidence(incident: IncidentEvidence) {
   return Boolean(incident.screenshotDataUri || incident.videoFrameDataUri);
 }
 
+async function emit(eventHandler: SwarmEventHandler | undefined, event: SwarmStreamEvent) {
+  if (eventHandler) {
+    await eventHandler(event);
+  }
+}
+
+async function emitDependencyFailure(
+  agentRuns: AgentRun[],
+  eventHandler: SwarmEventHandler | undefined,
+  agentName: string,
+  message: string,
+) {
+  const run = dependencyFailure(agentName, message);
+  agentRuns.push(run);
+  await emit(eventHandler, {
+    type: "agent_completed",
+    run,
+  });
+}
+
 export async function runIncidentSwarm(
   input: IncidentEvidence,
   options: {
     incidentId?: string | null;
   } = {},
 ): Promise<FinalIncidentPackage> {
+  return runIncidentSwarmWithEvents(input, options);
+}
+
+export async function runIncidentSwarmWithEvents(
+  input: IncidentEvidence,
+  options: {
+    incidentId?: string | null;
+    onEvent?: SwarmEventHandler;
+  } = {},
+): Promise<FinalIncidentPackage> {
   const incident = incidentEvidenceSchema.parse(input);
+  await emit(options.onEvent, {
+    type: "agent_started",
+    agent_name: "intake_agent",
+  });
   const intake = runIntakeAgent({
     incident,
     incidentId: options.incidentId ?? null,
+  });
+  await emit(options.onEvent, {
+    type: "agent_completed",
+    run: intake.run,
   });
 
   // Fail before launching parallel calls when live AI is not configured.
   getCerebrasEnv();
 
+  await Promise.all(
+    ["vision_agent", "log_agent", "api_agent", "db_agent"].map((agentName) =>
+      emit(options.onEvent, {
+        type: "agent_started",
+        agent_name: agentName,
+      }),
+    ),
+  );
+
   const [vision, logs, api, db] = await Promise.all([
-    runVisionAgent(incident),
-    runLogAgent(incident),
-    runApiAgent(incident),
-    runDbAgent(incident),
+    runVisionAgent(incident).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
+    runLogAgent(incident).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
+    runApiAgent(incident).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
+    runDbAgent(incident).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
   ]);
 
   const agentRuns: AgentRun[] = [
@@ -65,23 +148,29 @@ export async function runIncidentSwarm(
   const requiredVisionFailed = hasImageEvidence(incident) && !vision.ok;
 
   if (requiredVisionFailed || !logs.ok || !api.ok || !db.ok) {
-    agentRuns.push(
-      dependencyFailure(
-        "rca_agent",
-        "RCA skipped because one or more required evidence agents failed.",
-      ),
-      dependencyFailure(
-        "test_agent",
-        "Regression tests skipped because RCA did not complete.",
-      ),
-      dependencyFailure(
-        "release_agent",
-        "Release risk skipped because RCA and tests did not complete.",
-      ),
-      dependencyFailure(
-        "narrator_agent",
-        "Demo narration skipped because the incident package did not complete.",
-      ),
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "rca_agent",
+      "RCA skipped because one or more required evidence agents failed.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "test_agent",
+      "Regression tests skipped because RCA did not complete.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "release_agent",
+      "Release risk skipped because RCA and tests did not complete.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "narrator_agent",
+      "Demo narration skipped because the incident package did not complete.",
     );
 
     return finalIncidentPackageSchema.parse({
@@ -101,6 +190,10 @@ export async function runIncidentSwarm(
     });
   }
 
+  await emit(options.onEvent, {
+    type: "agent_started",
+    agent_name: "rca_agent",
+  });
   const rca = await runRcaAgent({
     incident,
     logs: logs.output,
@@ -109,21 +202,29 @@ export async function runIncidentSwarm(
     vision: vision.output,
   });
   agentRuns.push(rca.run);
+  await emit(options.onEvent, {
+    type: "agent_completed",
+    run: rca.run,
+  });
 
   if (!rca.ok) {
-    agentRuns.push(
-      dependencyFailure(
-        "test_agent",
-        "Regression tests skipped because RCA did not complete.",
-      ),
-      dependencyFailure(
-        "release_agent",
-        "Release risk skipped because RCA and tests did not complete.",
-      ),
-      dependencyFailure(
-        "narrator_agent",
-        "Demo narration skipped because the incident package did not complete.",
-      ),
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "test_agent",
+      "Regression tests skipped because RCA did not complete.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "release_agent",
+      "Release risk skipped because RCA and tests did not complete.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "narrator_agent",
+      "Demo narration skipped because the incident package did not complete.",
     );
 
     return finalIncidentPackageSchema.parse({
@@ -143,6 +244,10 @@ export async function runIncidentSwarm(
     });
   }
 
+  await emit(options.onEvent, {
+    type: "agent_started",
+    agent_name: "test_agent",
+  });
   const tests = await runTestAgent({
     incident,
     rca: rca.output,
@@ -150,17 +255,23 @@ export async function runIncidentSwarm(
     db: db.output,
   });
   agentRuns.push(tests.run);
+  await emit(options.onEvent, {
+    type: "agent_completed",
+    run: tests.run,
+  });
 
   if (!tests.ok) {
-    agentRuns.push(
-      dependencyFailure(
-        "release_agent",
-        "Release risk skipped because regression tests did not complete.",
-      ),
-      dependencyFailure(
-        "narrator_agent",
-        "Demo narration skipped because release risk did not complete.",
-      ),
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "release_agent",
+      "Release risk skipped because regression tests did not complete.",
+    );
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "narrator_agent",
+      "Demo narration skipped because release risk did not complete.",
     );
 
     return finalIncidentPackageSchema.parse({
@@ -180,19 +291,27 @@ export async function runIncidentSwarm(
     });
   }
 
+  await emit(options.onEvent, {
+    type: "agent_started",
+    agent_name: "release_agent",
+  });
   const release = await runReleaseAgent({
     incident,
     rca: rca.output,
     tests: tests.output,
   });
   agentRuns.push(release.run);
+  await emit(options.onEvent, {
+    type: "agent_completed",
+    run: release.run,
+  });
 
   if (!release.ok) {
-    agentRuns.push(
-      dependencyFailure(
-        "narrator_agent",
-        "Demo narration skipped because release risk did not complete.",
-      ),
+    await emitDependencyFailure(
+      agentRuns,
+      options.onEvent,
+      "narrator_agent",
+      "Demo narration skipped because release risk did not complete.",
     );
 
     return finalIncidentPackageSchema.parse({
@@ -212,6 +331,10 @@ export async function runIncidentSwarm(
     });
   }
 
+  await emit(options.onEvent, {
+    type: "agent_started",
+    agent_name: "narrator_agent",
+  });
   const narrator = await runNarratorAgent({
     incident,
     rca: rca.output,
@@ -219,6 +342,10 @@ export async function runIncidentSwarm(
     release: release.output,
   });
   agentRuns.push(narrator.run);
+  await emit(options.onEvent, {
+    type: "agent_completed",
+    run: narrator.run,
+  });
 
   return finalIncidentPackageSchema.parse({
     incident,

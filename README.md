@@ -18,6 +18,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Upload PNG, JPEG, or WebP screenshot/frame evidence up to 2MB.
 - Reject full video files clearly instead of pretending frame extraction exists.
 - Run a server-side incident swarm through `/api/agents/run`.
+- Stream live agent progress through `/api/agents/stream`.
 - Execute deterministic Intake plus Vision, Log, API, DB, RCA, Test, Release, and Narrator agent stages.
 - Validate model output with Zod schemas and show failed-agent states when provider calls fail.
 - Render the agent graph, result tabs, Jira output, release gate, and speed metrics from route output.
@@ -33,6 +34,7 @@ Evidence form
   |
   v
 /api/agents/run
+or /api/agents/stream
   |
   v
 Intake Agent
@@ -60,6 +62,7 @@ Key files:
 
 - `src/components/evidence-uploader.tsx` - sample/manual evidence intake and upload handling.
 - `src/app/api/agents/run/route.ts` - main swarm route.
+- `src/app/api/agents/stream/route.ts` - live swarm progress stream.
 - `src/lib/agents/orchestrator.ts` - dependency flow and failed-agent gating.
 - `src/lib/agents/*-agent.ts` - individual agents.
 - `src/lib/cerebras/client.ts` - lazy OpenAI-compatible Cerebras client.
