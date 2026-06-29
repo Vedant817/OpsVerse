@@ -57,7 +57,7 @@ Verification note:
 - README keeps the hackathon positioning explicit for Track 1, Track 3, and optional People's Choice.
 - The UI labels the workflow as `Synthetic evidence only`, and all bundled samples remain synthetic.
 - `curl -s http://127.0.0.1:3000` returned `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
-- Product output is still marked `[~]` because the output surface is actionable, but complete live RCA/test/release generation remains blocked by the configured provider/model returning `404 status code (no body)`.
+- Product output is still marked `[~]` because the output surface is actionable, but complete live RCA/test/release generation remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 
 ---
 
@@ -162,7 +162,7 @@ Verification note:
 - `rg "CEREBRAS_API_KEY|CEREBRAS_BASE_URL|CEREBRAS_MODEL|SUPABASE_SERVICE_ROLE_KEY" .next/static` returned no matches, confirming the client static bundle does not reference server secret names.
 - Supabase service-role handling is server-only through `src/lib/db/supabase.ts`, which imports `server-only`, lazy-loads the admin client, and reads `SUPABASE_SERVICE_ROLE_KEY` only on the server.
 - `.env.example` was checked and contains placeholders only. A real key was moved to ignored `.env.local`; rotate that key before relying on it because it had been placed in `.env.example` during local work.
-- HTTP smoke verified `/api/runtime/status` reports `gemma-4-31b`, Cerebras base URL origin, missing Supabase env names, and `NEXT_PUBLIC_APP_URL` while omitting actual `CEREBRAS_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` values.
+- HTTP smoke verified `/api/runtime/status` reports `gemma-4-31b`, Cerebras base URL origin, model availability, available provider model IDs, missing Supabase env names, and `NEXT_PUBLIC_APP_URL` while omitting actual `CEREBRAS_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` values.
 
 ---
 
@@ -303,7 +303,7 @@ Verification note:
 
 - Added `src/lib/samples/return-tracking-confirmed-qty.ts`, `src/lib/samples/order-tracking-items-missing.ts`, and `src/lib/samples/index.ts`.
 - The UI renders sample selector buttons for all three samples and updates client state without navigation.
-- Each sample can be submitted to `/api/agents/run`; complete swarm output is blocked by the configured Cerebras model returning `404 status code (no body)`.
+- Each sample can be submitted to `/api/agents/run`; complete swarm output is blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 
 ---
 
@@ -336,7 +336,7 @@ Verification note:
 
 - Replaced the default Next.js starter page with the OpsVerse intake workspace in `src/app/page.tsx`.
 - The product headline is now rendered through `src/components/hero.tsx` with the exact first-viewport positioning line.
-- The hero copy intentionally uses the one-line product pitch and avoids over-claiming completed live RCA/test/release output while the configured provider/model still returns `404 status code (no body)`.
+- The hero copy intentionally uses the one-line product pitch and avoids over-claiming completed live RCA/test/release output while the current Cerebras key does not list the configured `gemma-4-31b` model.
 - `curl -s http://127.0.0.1:3000` showed `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
 - Added `scripts/browser-smoke.mjs` so browser verification no longer depends on `agent-browser` or Playwright in this environment.
 - `npm run verify:ui` passed for `/` and `/incident` at desktop `1440x1000` and mobile `390x900`, verifying key visible copy and document-level overflow.
@@ -370,7 +370,7 @@ Verification note:
 - Added reusable client component `src/components/evidence-uploader.tsx` and route `src/app/incident/page.tsx`.
 - The button validates the evidence package, calls `/api/agents/run`, and renders the real execution graph/result tabs from the route payload. It does not fake swarm output.
 - `curl -s http://127.0.0.1:3000/incident` showed `OpsVerse`, `Synthetic evidence only`, all three sample names, and `Run Incident Swarm`.
-- Complete live swarm output remains blocked by the configured Cerebras model returning `404 status code (no body)`, but failed agent states render without crashing.
+- Complete live swarm output remains blocked by the configured Cerebras model being unavailable for the current key, but failed agent states render without crashing.
 
 ### 6.3 Swarm Execution Page
 
@@ -527,6 +527,7 @@ Verification note:
   - `baseURL: process.env.CEREBRAS_BASE_URL || "https://api.cerebras.ai/v1"`
   - `model: process.env.CEREBRAS_MODEL || "gemma-4-31b"`
 - [x] Implement `runGemmaAgent`.
+- [x] Probe Cerebras model availability before live generation.
 - [x] Measure:
   - start time
   - latency ms
@@ -550,7 +551,10 @@ Verification note:
 - Added `src/lib/cerebras/client.ts` with a lazy OpenAI-compatible Cerebras client and `runGemmaAgent`.
 - Added `src/app/api/benchmark/route.ts` as the server-only test route.
 - The route returns real latency, usage, tokens/sec, `time_info`, model, content, and response id when live Cerebras is configured.
-- Live Gemma call is blocked in this environment because `CEREBRAS_API_KEY` is not present in the shell or `.env.local`.
+- Live Gemma call is blocked in this environment because `/models` lists `gpt-oss-120b` and `zai-glm-4.7`, but not the configured `gemma-4-31b`.
+- Added a cached provider model-list preflight in `src/lib/cerebras/client.ts`. If `CEREBRAS_MODEL` is unavailable, agent calls fail with a typed `CerebrasModelUnavailableError` before attempting chat completion.
+- HTTP smoke verified `/api/benchmark` returns HTTP `424` with `configuredModel: "gemma-4-31b"` and available model IDs instead of a generic provider failure.
+- HTTP smoke verified `/api/agents/run` returns HTTP `502` with failed model-dependent agent runs carrying the model-unavailable message and no fake RCA/test/release output.
 - Missing-key and invalid-JSON paths were verified with `curl`.
 - `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
 
@@ -585,7 +589,7 @@ Verification note:
 - Malformed/non-schema model output is returned as a failed agent run instead of guessed output.
 - Added `tests/schemas-and-samples.test.ts` with representative Vision, Log, API, DB, RCA, Regression Test, Release Risk, Demo Narrator, agent-run, and final-package schema validation.
 - `npm test` passed with 4 tests covering bundled sample evidence, representative agent output schemas, invalid release-gate rejection, and final incident package validation.
-- Live valid-model JSON parsing is blocked because the configured Cerebras model currently returns `404 status code (no body)`.
+- Live valid-model JSON parsing is blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 
 ### 8.3 Prompt Templates
 
@@ -642,8 +646,8 @@ Verification note:
 - `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
 - Live screenshot analysis remains blocked because the configured Cerebras model currently returns provider errors.
 - HTTP smoke verified invalid `data:text/plain` screenshot evidence returns HTTP 400 with a clear MIME error.
-- HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the live provider returned `404 status code (no body)`, and the route returned a structured failed Vision run rather than fake image output.
-- HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current provider `404 status code (no body)`.
+- HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the current provider key does not list `gemma-4-31b`, and the route returned a structured failed Vision run rather than fake image output.
+- HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current model-unavailable provider path.
 - Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
 
 ---
@@ -705,8 +709,8 @@ Verification note:
 - Added `src/lib/agents/vision-agent.ts`, which validates image evidence, sends real multimodal `image_url` content to Cerebras, parses JSON, and validates against `visionOutputSchema`.
 - If no image/frame is supplied, the Vision agent records a failed/skipped run instead of inventing screenshot understanding.
 - If image/frame evidence is supplied and Vision fails, RCA/Test/Release are gated rather than proceeding with fake visual analysis.
-- Live successful Vision output remains blocked by the configured provider/model returning errors.
-- HTTP smoke with a valid PNG data URI verified `vision_agent` executes and returns the live provider `404 status code (no body)` failure; `rca_agent` is skipped because required image evidence failed.
+- Live successful Vision output remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
+- HTTP smoke with a valid PNG data URI verified `vision_agent` executes and returns the live model-unavailable failure; `rca_agent` is skipped because required image evidence failed.
 
 ### 9.3 Log Analysis Agent
 
@@ -830,7 +834,7 @@ Verification note:
 - Added server-only text agents under `src/lib/agents`.
 - Added `src/lib/agents/orchestrator.ts` and `src/app/api/agents/run/route.ts`.
 - `/api/agents/run` validates incident evidence, runs Log/API/DB agents in parallel, gates RCA/Test/Release on dependencies, and returns partial failed agent runs when provider calls fail.
-- With `.env.local` loaded, the configured model returns `404 status code (no body)` from Cerebras, so the route correctly returns HTTP 502 with failed agent diagnostics instead of fake RCA output.
+- With `.env.local` loaded, the provider model list does not include the configured `gemma-4-31b`, so the route correctly returns HTTP 502 with failed agent diagnostics instead of fake RCA output.
 - The UI Run button now calls `/api/agents/run` and displays the real structured success/failure payload.
 
 ### 9.9 Demo Narrator Agent
@@ -905,7 +909,7 @@ Verification note:
 - Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
 - Narrator remains gated on both Regression Test and Release Risk completion.
 - `npm run typecheck` and `npm run lint` passed after the release-agent contract change.
-- HTTP SSE smoke on the current provider-failure path still returned 5 started events, 9 completed agent runs, and a final `swarm_completed` event. The post-RCA parallel branch cannot be live-exercised until the configured Cerebras model stops returning provider `404 status code (no body)`.
+- HTTP SSE smoke on the current provider-failure path still returned 5 started events, 9 completed agent runs, and a final `swarm_completed` event. The post-RCA parallel branch cannot be live-exercised until the configured `gemma-4-31b` model is available for the key.
 
 ### 10.2 Streaming
 
@@ -932,7 +936,7 @@ Verification note:
 - The intake UI now posts to `/api/agents/stream`, reads the response body, updates active agent states from real SSE events, and renders the final package when `swarm_completed` arrives.
 - Agent metrics are included on `agent_completed` events when provider responses include metrics; there is no separate `metrics_updated` event yet.
 - Polling fallback is not needed for the MVP because SSE is implemented as the primary progress path; if a target host cannot support streamed route responses, a polling route can be added later.
-- HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure still appears as failed agent output with `404 status code (no body)`.
+- HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure now appears as a model-unavailable failed agent output.
 
 ---
 
@@ -977,8 +981,8 @@ Verification note:
 - `/api/agents/run` now accepts raw incident evidence or `incident_id` / `incidentId`.
 - When Supabase is configured, raw evidence is saved before the swarm runs, agent runs are saved after execution, and completed swarms save aggregate Cerebras speed benchmark data.
 - When Supabase is not configured, persistence is explicitly reported as disabled and no fake durable storage is claimed.
-- Complete primary sample output remains blocked because the configured Cerebras model currently returns `404 status code (no body)`.
-- Verified over HTTP with a valid sample payload after the stream refactor: `/api/agents/run` still returned HTTP 502 with `persistence.enabled: false`, nine agent runs from Intake through Narrator, and model-dependent agents containing the live provider `404 status code (no body)` error.
+- Complete primary sample output remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
+- Verified over HTTP with a valid sample payload after the model-readiness slice: `/api/agents/run` returned HTTP 502 with `persistence.enabled: false`, nine agent runs from Intake through Narrator, and model-dependent agents containing the live model-unavailable error.
 
 ### 11.3 Benchmark Route
 
@@ -1001,6 +1005,7 @@ Verification note:
 
 - [x] Implement `app/api/runtime/status/route.ts`.
 - [x] Report Cerebras configuration without exposing `CEREBRAS_API_KEY`.
+- [x] Report configured Cerebras model availability from the provider model list.
 - [x] Report Supabase persistence configuration without exposing `SUPABASE_SERVICE_ROLE_KEY`.
 - [x] Report the public app URL used by the current runtime.
 - [x] Keep the route no-store so status is not cached.
@@ -1015,8 +1020,8 @@ Verification note:
 
 - Added `GET /api/runtime/status`.
 - Added a Runtime panel in `src/components/evidence-uploader.tsx` that fetches the status route and displays Cerebras, Supabase, and app URL readiness.
-- The panel labels configured services as not probed/not verified so configuration is not confused with live provider or database success.
-- HTTP smoke verified `/api/runtime/status` returned Cerebras configured for `gemma-4-31b`, Supabase missing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and `NEXT_PUBLIC_APP_URL=http://localhost:3000`.
+- The panel labels Cerebras as unavailable when the configured model is missing from the provider model list, so configuration is not confused with live model availability.
+- HTTP smoke verified `/api/runtime/status` returned Cerebras configured for `gemma-4-31b`, `model_available: false`, available models `gpt-oss-120b` and `zai-glm-4.7`, Supabase missing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and `NEXT_PUBLIC_APP_URL=http://localhost:3000`.
 - The response includes missing env variable names but does not include actual API key or service-role values.
 
 ---
@@ -1279,7 +1284,7 @@ Verification note:
 - Added `scripts/deployment-readiness.mjs` and `npm run verify:deployment`.
 - Added `npm run verify:local` to run typecheck, lint, tests, tracked secret scanning, build, and audit in one command.
 - `npm run verify:deployment` now passes repo-local git identity, `vercel.json`, scripts, `.env.example`, Supabase schema, `.env.local` ignore, `.vercel` ignore, and tracked-secret checks. It fails on the three external prerequisites that are actually missing here: git remote, GitHub CLI, and Vercel CLI.
-- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the configured Cerebras model still returns provider `404 status code (no body)` locally.
+- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the current Cerebras key does not list the configured `gemma-4-31b` model.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
 ---
@@ -1400,7 +1405,7 @@ Verification note:
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
-- Quality gates are still blocked from full `[x]` because the configured Cerebras model returns provider `404 status code (no body)`, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
+- Quality gates are still blocked from full `[x]` because the current Cerebras key does not list the configured `gemma-4-31b` model, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 
 ---
 

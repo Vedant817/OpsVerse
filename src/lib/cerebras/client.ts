@@ -30,8 +30,40 @@ export type GemmaAgentResult = {
   responseId: string | null;
 };
 
+export type CerebrasModelReadiness = {
+  configuredModel: string;
+  available: boolean;
+  availableModels: string[];
+  checkedAt: string;
+};
+
+export class CerebrasModelUnavailableError extends Error {
+  readonly configuredModel: string;
+  readonly availableModels: string[];
+
+  constructor(configuredModel: string, availableModels: string[]) {
+    super(
+      `Configured Cerebras model "${configuredModel}" is not available for this API key. Available models: ${
+        availableModels.length > 0 ? availableModels.join(", ") : "none returned"
+      }. Set CEREBRAS_MODEL to an available Gemma 4 model before claiming live Gemma execution.`,
+    );
+    this.name = "CerebrasModelUnavailableError";
+    this.configuredModel = configuredModel;
+    this.availableModels = availableModels;
+  }
+}
+
 let cerebrasClient: OpenAI | null = null;
 let cerebrasClientBaseUrl: string | null = null;
+let modelListCache:
+  | {
+      baseUrl: string;
+      fetchedAt: number;
+      ids: string[];
+    }
+  | null = null;
+let modelListRequest: Promise<string[]> | null = null;
+const modelListCacheMs = 60_000;
 
 function getCerebrasClient() {
   const env = getCerebrasEnv();
@@ -47,6 +79,99 @@ function getCerebrasClient() {
   return { client: cerebrasClient, env };
 }
 
+function modelsUrl(baseUrl: string) {
+  return `${baseUrl.replace(/\/$/, "")}/models`;
+}
+
+async function fetchCerebrasModelIds() {
+  const env = getCerebrasEnv();
+  const now = Date.now();
+
+  if (
+    modelListCache &&
+    modelListCache.baseUrl === env.CEREBRAS_BASE_URL &&
+    now - modelListCache.fetchedAt < modelListCacheMs
+  ) {
+    return modelListCache.ids;
+  }
+
+  if (!modelListRequest) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8_000);
+
+    modelListRequest = fetch(modelsUrl(env.CEREBRAS_BASE_URL), {
+      headers: {
+        Authorization: `Bearer ${env.CEREBRAS_API_KEY}`,
+      },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          let detail = "";
+          try {
+            const payload = (await response.json()) as unknown;
+            detail = JSON.stringify(payload);
+          } catch {
+            detail = await response.text().catch(() => "");
+          }
+
+          throw new Error(
+            `Cerebras model list request failed with status ${response.status}${
+              detail ? `: ${detail}` : ""
+            }`,
+          );
+        }
+
+        const payload = (await response.json()) as {
+          data?: Array<{ id?: unknown }>;
+        };
+        const ids = (payload.data ?? [])
+          .map((model) => model.id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0)
+          .sort();
+
+        modelListCache = {
+          baseUrl: env.CEREBRAS_BASE_URL,
+          fetchedAt: Date.now(),
+          ids,
+        };
+
+        return ids;
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        modelListRequest = null;
+      });
+  }
+
+  return modelListRequest;
+}
+
+export async function checkCerebrasModelReadiness(): Promise<CerebrasModelReadiness> {
+  const env = getCerebrasEnv();
+  const availableModels = await fetchCerebrasModelIds();
+
+  return {
+    configuredModel: env.CEREBRAS_MODEL,
+    available: availableModels.includes(env.CEREBRAS_MODEL),
+    availableModels,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+export async function assertCerebrasModelAvailable() {
+  const readiness = await checkCerebrasModelReadiness();
+
+  if (!readiness.available) {
+    throw new CerebrasModelUnavailableError(
+      readiness.configuredModel,
+      readiness.availableModels,
+    );
+  }
+
+  return readiness;
+}
+
 export async function runGemmaAgent({
   messages,
   responseFormat,
@@ -54,6 +179,7 @@ export async function runGemmaAgent({
   temperature = 0.2,
 }: GemmaAgentRequest): Promise<GemmaAgentResult> {
   const { client, env } = getCerebrasClient();
+  await assertCerebrasModelAvailable();
   const startedAt = Date.now();
 
   const response = await client.chat.completions.create({

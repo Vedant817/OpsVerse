@@ -90,6 +90,9 @@ type RuntimeStatus = {
   cerebras: {
     configured: boolean;
     model: string | null;
+    model_available: boolean;
+    available_models: string[];
+    checked_at: string | null;
     base_url_origin: string | null;
     missing: string[];
     note: string;
@@ -1006,11 +1009,19 @@ function RuntimeStatusPanel({
         <div className="grid gap-3 text-xs">
           <RuntimeStatusRow
             label="Cerebras"
-            configured={status.cerebras.configured}
+            configured={
+              status.cerebras.configured && status.cerebras.model_available
+            }
             detail={
-              status.cerebras.configured
-                ? `${status.cerebras.model ?? "model configured"}; not probed`
-                : `Missing ${status.cerebras.missing.join(", ") || "configuration"}`
+              status.cerebras.configured && status.cerebras.model_available
+                ? `${status.cerebras.model ?? "model configured"} available`
+                : status.cerebras.configured
+                  ? `${status.cerebras.model ?? "configured model"} unavailable; available: ${
+                      status.cerebras.available_models.join(", ") || "none returned"
+                    }`
+                  : `Missing ${
+                      status.cerebras.missing.join(", ") || "configuration"
+                    }`
             }
           />
           <RuntimeStatusRow
