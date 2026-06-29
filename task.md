@@ -1220,7 +1220,7 @@ Do not spend MVP time on these unless all MVP items are complete:
 Only start these after the MVP is locally working and deployable.
 
 - [x] Video upload to frame extraction.
-- [ ] GitHub PR diff analyzer.
+- [x] GitHub PR diff analyzer.
 - [x] Export Jira markdown.
 - [x] Download incident report as PDF.
 - [x] Slack-style incident timeline.
@@ -1243,6 +1243,9 @@ Verification note:
 - Added `src/lib/timeline/incident-timeline.ts` and `src/components/incident-timeline.tsx` to render a Slack-style activity feed from supplied evidence, agent runs, and generated output availability.
 - Added `src/lib/incident/visual-evidence.ts` and updated the orchestrator so extracted `videoFrameDataUris` count as visual evidence when deciding whether failed Vision should gate RCA/Test/Release.
 - Added `tests/incident-timeline.test.ts` covering timeline reconstruction and the extracted-video-frame visual evidence predicate.
+- Added `src/lib/diff/pr-diff-analysis.ts` and `src/components/pr-diff-analysis.tsx` to analyze supplied Git diff evidence for touched files, changed fields, removed null/default fallbacks, risk findings, and recommended regression checks.
+- Added a `PR Diff` result tab and included the analysis in the incident report export; the UI states clearly that no live GitHub API integration is claimed.
+- Added `tests/pr-diff-analysis.test.ts` covering fallback-removal detection, no-diff empty state, and exported report inclusion.
 
 ---
 

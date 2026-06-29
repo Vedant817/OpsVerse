@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { JiraOutput } from "@/components/jira-output";
+import { PrDiffAnalysis } from "@/components/pr-diff-analysis";
 import { ReleaseGate } from "@/components/release-gate";
 import { SpeedMetrics } from "@/components/speed-metrics";
 import {
@@ -32,6 +33,7 @@ const tabs = [
   "Release Gate",
   "Speed Metrics",
   "Timeline",
+  "PR Diff",
   "Submission",
 ] as const;
 
@@ -312,6 +314,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
 
         {activeTab === "Timeline" ? (
           <IncidentTimeline result={result} />
+        ) : null}
+
+        {activeTab === "PR Diff" ? (
+          <PrDiffAnalysis result={result} />
         ) : null}
 
         {activeTab === "Submission" ? (

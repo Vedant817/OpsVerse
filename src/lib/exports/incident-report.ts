@@ -1,4 +1,5 @@
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
+import { analyzePrDiff } from "@/lib/diff/pr-diff-analysis";
 
 const unavailable = "Unavailable: responsible agent did not complete successfully.";
 
@@ -67,6 +68,7 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
   const rca = outputs.rca;
   const tests = outputs.tests;
   const release = outputs.release;
+  const prDiff = analyzePrDiff(incident.gitDiff);
   const metricsRows = agentRuns.map((run) =>
     [
       run.agent_name,
@@ -150,6 +152,29 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
     "| Agent | Status | Latency ms | Tokens/sec | Error |",
     "| --- | --- | ---: | ---: | --- |",
     metricsRows.length > 0 ? metricsRows.map((row) => `| ${row} |`).join("\n") : "| n/a | n/a | n/a | n/a | n/a |",
+    "",
+    "## PR Diff Analysis",
+    "",
+    `- Summary: ${prDiff.summary}`,
+    `- Files: ${prDiff.files.length > 0 ? prDiff.files.join(", ") : "n/a"}`,
+    `- Changed fields: ${
+      prDiff.changedFields.length > 0 ? prDiff.changedFields.join(", ") : "n/a"
+    }`,
+    "",
+    "### PR Diff Risks",
+    "",
+    prDiff.risks.length > 0
+      ? prDiff.risks
+          .map(
+            (risk) =>
+              `- ${risk.severity.toUpperCase()}: ${risk.title}. ${risk.evidence} Recommendation: ${risk.recommendation}`,
+          )
+          .join("\n")
+      : "- No risky pattern detected in the supplied diff.",
+    "",
+    "### PR Diff Regression Checks",
+    "",
+    listOrUnavailable(prDiff.recommendedTests),
     "",
     "## Evidence",
     "",
