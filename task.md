@@ -10,7 +10,7 @@ Current repository state:
 - [x] Next.js application scaffold exists
 - [x] Runtime dependencies installed
 - [~] Cerebras integration implemented
-- [~] Incident intake implemented
+- [x] Incident intake implemented
 - [~] Agent swarm implemented
 - [~] Dashboard implemented
 - [~] Supabase persistence implemented
@@ -392,7 +392,7 @@ Verification note:
 - Added `src/components/agent-card.tsx` and `src/components/agent-graph.tsx`.
 - The intake flow renders running state while `/api/agents/run` is in flight, then renders real completed/failed/pending nodes from the route payload.
 - Vision and Narrator are shown as pending until their agents exist; Log/API/DB/RCA/Test/Release render from real route data.
-- RCA dependency gating is implemented for Log/API/DB; Vision is still pending because the multimodal agent is not implemented yet.
+- RCA dependency gating is implemented for Log/API/DB and for Vision when real image/frame evidence is supplied.
 - Browser smoke with local Chrome verified the demo sample submission renders `Incident swarm failed`, `Agent Execution`, `Log Agent`, and result tabs without a Next error overlay. The only console error was the expected HTTP 502 from the live provider failure.
 
 ### 6.4 Results Dashboard
@@ -590,17 +590,17 @@ Acceptance criteria:
 
 Verification note:
 
-- Added prompts in `src/lib/cerebras/prompts.ts` for Log, API, DB, RCA, Regression Test, and Release Risk agents.
-- Vision and Narrator schemas exist, but their runnable prompts/agents remain future work.
+- Added prompts in `src/lib/cerebras/prompts.ts` for Vision, Log, API, DB, RCA, Regression Test, and Release Risk agents.
+- Narrator schema exists, but its runnable prompt/agent remains future work.
 - Live prompt verification is blocked by Cerebras returning 404 for the configured model.
 
 ### 8.4 Image Handling
 
-- [ ] Implement `lib/cerebras/image.ts`.
-- [ ] Convert uploaded image files to base64 data URIs.
-- [ ] Send screenshot to Vision Agent using multimodal message content.
-- [ ] Validate file type and size.
-- [ ] For video, do not send the full video directly.
+- [x] Implement `lib/cerebras/image.ts`.
+- [x] Convert uploaded image files to base64 data URIs.
+- [x] Send screenshot to Vision Agent using multimodal message content.
+- [x] Validate file type and size.
+- [x] For video, do not send the full video directly.
 - [ ] For video stretch work, extract 3-5 representative frames:
   - before action
   - clicked button
@@ -609,8 +609,19 @@ Verification note:
 
 Acceptance criteria:
 
-- [ ] Vision Agent can analyze an uploaded screenshot.
-- [ ] Unsupported file types are rejected clearly.
+- [!] Vision Agent can analyze an uploaded screenshot.
+- [x] Unsupported file types are rejected clearly.
+
+Verification note:
+
+- Added `src/lib/cerebras/image.ts` with server-side validation for PNG, JPEG, and WebP data URIs up to 2MB.
+- The intake UI now reads selected PNG/JPEG/WebP screenshots or frame images into base64 data URIs and includes them in `/api/agents/run`.
+- Full video files are rejected with a clear message; users must upload a representative image frame until frame extraction is implemented.
+- `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
+- Live screenshot analysis remains blocked because the configured Cerebras model currently returns provider errors.
+- HTTP smoke verified invalid `data:text/plain` screenshot evidence returns HTTP 400 with a clear MIME error.
+- HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the live provider returned `404 status code (no body)`, and the route returned a structured failed Vision run rather than fake image output.
+- Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
 
 ---
 
@@ -618,31 +629,38 @@ Acceptance criteria:
 
 ### 9.1 Intake Agent
 
-- [ ] Implement `lib/agents/intake-agent.ts` or equivalent intake logic.
-- [ ] Normalize uploaded evidence.
-- [ ] Detect available artifacts:
+- [x] Implement `lib/agents/intake-agent.ts` or equivalent intake logic.
+- [x] Normalize uploaded evidence.
+- [x] Detect available artifacts:
   - screenshot
   - logs
   - API response
   - DB snapshot
   - git diff
   - runbook notes
-- [ ] Detect missing artifacts, such as network trace.
-- [ ] Recommend which agents should run.
-- [ ] Create or return an incident id.
+- [x] Detect missing artifacts, such as network trace.
+- [x] Recommend which agents should run.
+- [x] Create or return an incident id.
 
 Expected output fields:
 
-- [ ] `incident_id`
-- [ ] `detected_artifacts`
-- [ ] `missing_artifacts`
-- [ ] `recommended_agents`
+- [x] `incident_id`
+- [x] `detected_artifacts`
+- [x] `missing_artifacts`
+- [x] `recommended_agents`
+
+Verification note:
+
+- Added deterministic server-only intake logic in `src/lib/agents/intake-agent.ts`.
+- Intake detects screenshot, video frame/notes, logs, API response, DB snapshot, and git diff availability; it lists missing network trace, frontend console errors, and other missing artifacts.
+- Intake is included as `intake_agent` in the real swarm output and uses the persisted incident id when Supabase is configured, otherwise `unpersisted`.
+- HTTP smoke verified `intake_agent` returns `complete` before live model-dependent agents fail.
 
 ### 9.2 Vision Triage Agent
 
-- [ ] Implement `lib/agents/vision-agent.ts`.
-- [ ] Analyze screenshot or video frame.
-- [ ] Identify:
+- [x] Implement `lib/agents/vision-agent.ts`.
+- [~] Analyze screenshot or video frame.
+- [x] Identify:
   - screen type
   - visible error or missing error
   - UI state
@@ -653,11 +671,19 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `screen_type`
-- [ ] `visible_error`
-- [ ] `ui_state`
-- [ ] `affected_flow`
-- [ ] `confidence`
+- [x] `screen_type`
+- [x] `visible_error`
+- [x] `ui_state`
+- [x] `affected_flow`
+- [x] `confidence`
+
+Verification note:
+
+- Added `src/lib/agents/vision-agent.ts`, which validates image evidence, sends real multimodal `image_url` content to Cerebras, parses JSON, and validates against `visionOutputSchema`.
+- If no image/frame is supplied, the Vision agent records a failed/skipped run instead of inventing screenshot understanding.
+- If image/frame evidence is supplied and Vision fails, RCA/Test/Release are gated rather than proceeding with fake visual analysis.
+- Live successful Vision output remains blocked by the configured provider/model returning errors.
+- HTTP smoke with a valid PNG data URI verified `vision_agent` executes and returns the live provider `404 status code (no body)` failure; `rca_agent` is skipped because required image evidence failed.
 
 ### 9.3 Log Analysis Agent
 
@@ -836,7 +862,7 @@ Vision + Logs + API + DB
 
 Acceptance criteria:
 
-- [ ] Agents run in the intended dependency order.
+- [~] Agents run in the intended dependency order.
 - [x] Independent agents use `Promise.all` or equivalent parallel execution.
 - [x] UI can display per-agent progress.
 - [x] A single failed non-critical agent does not blank the whole dashboard.
@@ -1064,7 +1090,7 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [~] 13. Orchestrator implemented.
 - [~] 14. Run Swarm button produces structured outputs.
 - [x] 15. Result tabs display RCA, Jira bug, tests, and release gate.
-- [ ] 16. Multimodal screenshot upload and Vision Agent.
+- [~] 16. Multimodal screenshot upload and Vision Agent.
 - [x] 17. Agent graph and progress UI.
 - [x] 18. Speed metrics from Cerebras responses.
 - [~] 19. Supabase schema and persistence.

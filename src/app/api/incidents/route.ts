@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { incidentEvidenceSchema } from "@/lib/cerebras/schemas";
 import { isEnvConfigError } from "@/lib/env";
 import { createIncidentWithEvidence, DatabaseQueryError } from "@/lib/db/queries";
+import {
+  ImageValidationError,
+  validateIncidentImageEvidence,
+} from "@/lib/cerebras/image";
 
 export const runtime = "nodejs";
 
@@ -33,6 +37,7 @@ export async function POST(request: Request) {
 
   try {
     const incident = incidentEvidenceSchema.parse(body);
+    validateIncidentImageEvidence(incident);
     const incidentId = await createIncidentWithEvidence(incident);
 
     return NextResponse.json(
@@ -71,6 +76,16 @@ export async function POST(request: Request) {
           missing: error.missing,
         },
         { status: 503 },
+      );
+    }
+
+    if (error instanceof ImageValidationError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+        },
+        { status: 400 },
       );
     }
 

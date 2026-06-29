@@ -2,6 +2,7 @@ import type { AgentRun, FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { AgentCard, type AgentDisplayStatus } from "@/components/agent-card";
 
 const agents = [
+  { name: "intake_agent", label: "Intake Agent" },
   { name: "vision_agent", label: "Vision Agent" },
   { name: "log_agent", label: "Log Agent" },
   { name: "api_agent", label: "API Agent" },
@@ -43,6 +44,7 @@ function previewFromRun(run?: AgentRun) {
     "data_issue",
     "reason",
     "api_regression_test",
+    "screen_type",
   ]) {
     const value = output[key];
 
@@ -59,7 +61,12 @@ function statusForAgent(agentName: string, run: AgentRun | undefined, isRunning:
     return run.status;
   }
 
-  if (isRunning && ["log_agent", "api_agent", "db_agent"].includes(agentName)) {
+  if (
+    isRunning &&
+    ["intake_agent", "vision_agent", "log_agent", "api_agent", "db_agent"].includes(
+      agentName,
+    )
+  ) {
     return "running";
   }
 
@@ -80,7 +87,7 @@ export function AgentGraph({ result, isRunning = false }: AgentGraphProps) {
           </p>
         </div>
         <div className="font-mono text-xs text-[#625d52]">
-          {result?.agent_runs.length ?? 0}/8 runs recorded
+          {result?.agent_runs.length ?? 0}/9 runs recorded
         </div>
       </div>
 

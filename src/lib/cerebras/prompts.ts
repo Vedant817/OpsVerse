@@ -4,9 +4,32 @@ import type {
   IncidentEvidence,
   LogOutput,
   RcaOutput,
+  VisionOutput,
 } from "@/lib/cerebras/schemas";
 
 const jsonOnly = "Return only valid JSON. Do not wrap the JSON in markdown.";
+
+export function buildVisionAgentPrompt(incident: IncidentEvidence) {
+  return `${jsonOnly}
+
+You are the Vision Triage Agent in an enterprise incident-response swarm.
+
+Analyze the provided screenshot or representative video frame together with the
+incident metadata. Return:
+- screen_type
+- visible_error
+- ui_state
+- affected_flow
+- confidence from 0 to 1
+
+If the image does not visibly contain an error, say that directly. Do not invent
+text or UI state that is not visible.
+
+Incident title: ${incident.title}
+Module: ${incident.module}
+Screenshot notes: ${incident.screenshotNote || "No screenshot notes provided."}
+Video/frame notes: ${incident.videoNote || "No video/frame notes provided."}`;
+}
 
 export function buildLogAgentPrompt(incident: IncidentEvidence) {
   return `${jsonOnly}
@@ -82,17 +105,19 @@ export function buildRcaAgentPrompt({
   logs,
   api,
   db,
+  vision,
 }: {
   incident: IncidentEvidence;
   logs: LogOutput;
   api: ApiOutput;
   db: DbOutput;
+  vision: VisionOutput | null;
 }) {
   return `${jsonOnly}
 
 You are the Root Cause Agent.
 
-Combine the evidence from Log, API, and DB agents. Produce:
+Combine the evidence from Vision, Log, API, and DB agents. Produce:
 - root_cause_summary
 - confidence from 0 to 1
 - evidence_links using agent names
@@ -112,7 +137,10 @@ API agent output:
 ${JSON.stringify(api, null, 2)}
 
 DB agent output:
-${JSON.stringify(db, null, 2)}`;
+${JSON.stringify(db, null, 2)}
+
+Vision agent output:
+${vision ? JSON.stringify(vision, null, 2) : "Vision output unavailable."}`;
 }
 
 export function buildTestAgentPrompt({

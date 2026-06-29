@@ -203,7 +203,15 @@ export function ResultTabs({ result }: ResultTabsProps) {
               icon={<ShieldAlert size={17} aria-hidden="true" />}
               label="Screenshot Understanding"
               value={
-                result.incident.screenshotNote ||
+                result.outputs.vision
+                  ? [
+                      `Screen: ${result.outputs.vision.screen_type}`,
+                      `Visible error: ${result.outputs.vision.visible_error}`,
+                      `UI state: ${result.outputs.vision.ui_state}`,
+                      `Affected flow: ${result.outputs.vision.affected_flow}`,
+                      `Confidence: ${Math.round(result.outputs.vision.confidence * 100)}%`,
+                    ].join("\n")
+                  : result.incident.screenshotNote ||
                 "No screenshot interpretation output has completed yet."
               }
             />

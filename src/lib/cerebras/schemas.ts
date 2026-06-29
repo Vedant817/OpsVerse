@@ -4,7 +4,11 @@ export const incidentEvidenceSchema = z.object({
   title: z.string().trim().min(1, "Incident title is required"),
   module: z.string().trim().min(1, "Module or service is required"),
   screenshotNote: z.string().trim().optional().default(""),
+  screenshotDataUri: z.string().trim().optional().default(""),
+  screenshotFileName: z.string().trim().optional().default(""),
   videoNote: z.string().trim().optional().default(""),
+  videoFrameDataUri: z.string().trim().optional().default(""),
+  videoFileName: z.string().trim().optional().default(""),
   logs: z.string().trim().min(1, "Logs are required"),
   apiResponse: z.string().trim().min(1, "API response is required"),
   dbSnapshot: z.string().trim().min(1, "DB snapshot is required"),
@@ -16,6 +20,8 @@ export const intakeOutputSchema = z.object({
   detected_artifacts: z.array(z.string()),
   missing_artifacts: z.array(z.string()),
   recommended_agents: z.array(z.string()),
+  normalized_title: z.string(),
+  normalized_module: z.string(),
 });
 
 export const visionOutputSchema = z.object({
@@ -121,8 +127,10 @@ export const agentRunSchema = z.object({
 
 export const finalIncidentPackageSchema = z.object({
   incident: incidentEvidenceSchema,
-  agent_runs: z.array(agentRunSchema),
+    agent_runs: z.array(agentRunSchema),
   outputs: z.object({
+    intake: intakeOutputSchema.nullable(),
+    vision: visionOutputSchema.nullable(),
     logs: logOutputSchema.nullable(),
     api: apiOutputSchema.nullable(),
     db: dbOutputSchema.nullable(),
@@ -133,6 +141,8 @@ export const finalIncidentPackageSchema = z.object({
 });
 
 export type IncidentEvidence = z.infer<typeof incidentEvidenceSchema>;
+export type IntakeOutput = z.infer<typeof intakeOutputSchema>;
+export type VisionOutput = z.infer<typeof visionOutputSchema>;
 export type LogOutput = z.infer<typeof logOutputSchema>;
 export type ApiOutput = z.infer<typeof apiOutputSchema>;
 export type DbOutput = z.infer<typeof dbOutputSchema>;

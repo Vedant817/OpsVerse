@@ -14,6 +14,10 @@ import {
   saveAgentRuns,
   saveSpeedBenchmarkData,
 } from "@/lib/db/queries";
+import {
+  ImageValidationError,
+  validateIncidentImageEvidence,
+} from "@/lib/cerebras/image";
 
 export const runtime = "nodejs";
 
@@ -94,6 +98,8 @@ export async function POST(request: Request) {
       ? await loadIncidentEvidence(requestedIncidentId)
       : incidentEvidenceSchema.parse(body);
 
+    validateIncidentImageEvidence(incident);
+
     if (!requestedIncidentId && persistence.enabled) {
       try {
         persistence.incident_id = await createIncidentWithEvidence(incident);
@@ -106,7 +112,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = await runIncidentSwarm(incident);
+    const result = await runIncidentSwarm(incident, {
+      incidentId: persistence.incident_id,
+    });
     const completed = result.agent_runs.every((run) => run.status === "complete");
 
     if (persistence.enabled && persistence.incident_id) {
@@ -182,6 +190,16 @@ export async function POST(request: Request) {
           missing: error.missing,
         },
         { status: 503 },
+      );
+    }
+
+    if (error instanceof ImageValidationError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+        },
+        { status: 400 },
       );
     }
 

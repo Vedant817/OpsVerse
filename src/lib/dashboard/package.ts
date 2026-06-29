@@ -4,10 +4,12 @@ import {
   apiOutputSchema,
   dbOutputSchema,
   finalIncidentPackageSchema,
+  intakeOutputSchema,
   logOutputSchema,
   rcaOutputSchema,
   regressionTestOutputSchema,
   releaseRiskOutputSchema,
+  visionOutputSchema,
   type AgentRun,
   type FinalIncidentPackage,
   type IncidentEvidence,
@@ -33,7 +35,11 @@ function incidentFromRecord(record: IncidentDashboardRecord): IncidentEvidence {
     title: record.incident.title,
     module: record.incident.module ?? "",
     screenshotNote: evidence.get("screenshot_note") ?? "",
+    screenshotDataUri: evidence.get("screenshot_data_uri") ?? "",
+    screenshotFileName: evidence.get("screenshot_file_name") ?? "",
     videoNote: evidence.get("video_note") ?? "",
+    videoFrameDataUri: evidence.get("video_frame_data_uri") ?? "",
+    videoFileName: evidence.get("video_file_name") ?? "",
     logs: evidence.get("logs") ?? "",
     apiResponse: evidence.get("api_response") ?? "",
     dbSnapshot: evidence.get("db_snapshot") ?? "",
@@ -73,6 +79,8 @@ export function dashboardRecordToFinalPackage(
   record: IncidentDashboardRecord,
 ): FinalIncidentPackage {
   const logs = logOutputSchema.safeParse(outputForAgent(record, "log_agent"));
+  const intake = intakeOutputSchema.safeParse(outputForAgent(record, "intake_agent"));
+  const vision = visionOutputSchema.safeParse(outputForAgent(record, "vision_agent"));
   const api = apiOutputSchema.safeParse(outputForAgent(record, "api_agent"));
   const db = dbOutputSchema.safeParse(outputForAgent(record, "db_agent"));
   const rca = rcaOutputSchema.safeParse(outputForAgent(record, "rca_agent"));
@@ -87,6 +95,8 @@ export function dashboardRecordToFinalPackage(
     incident: incidentFromRecord(record),
     agent_runs: record.agentRuns.map(agentRunFromRow),
     outputs: {
+      intake: intake.success ? intake.data : null,
+      vision: vision.success ? vision.data : null,
       logs: logs.success ? logs.data : null,
       api: api.success ? api.data : null,
       db: db.success ? db.data : null,

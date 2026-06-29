@@ -10,10 +10,12 @@ import {
 } from "@/lib/cerebras/schemas";
 import { runApiAgent } from "./api-agent";
 import { runDbAgent } from "./db-agent";
+import { runIntakeAgent } from "./intake-agent";
 import { runLogAgent } from "./log-agent";
 import { runRcaAgent } from "./rca-agent";
 import { runReleaseAgent } from "./release-agent";
 import { runTestAgent } from "./test-agent";
+import { runVisionAgent } from "./vision-agent";
 
 function dependencyFailure(agentName: string, message: string): AgentRun {
   return {
@@ -25,23 +27,43 @@ function dependencyFailure(agentName: string, message: string): AgentRun {
   };
 }
 
+function hasImageEvidence(incident: IncidentEvidence) {
+  return Boolean(incident.screenshotDataUri || incident.videoFrameDataUri);
+}
+
 export async function runIncidentSwarm(
   input: IncidentEvidence,
+  options: {
+    incidentId?: string | null;
+  } = {},
 ): Promise<FinalIncidentPackage> {
   const incident = incidentEvidenceSchema.parse(input);
+  const intake = runIntakeAgent({
+    incident,
+    incidentId: options.incidentId ?? null,
+  });
 
   // Fail before launching parallel calls when live AI is not configured.
   getCerebrasEnv();
 
-  const [logs, api, db] = await Promise.all([
+  const [vision, logs, api, db] = await Promise.all([
+    runVisionAgent(incident),
     runLogAgent(incident),
     runApiAgent(incident),
     runDbAgent(incident),
   ]);
 
-  const agentRuns: AgentRun[] = [logs.run, api.run, db.run];
+  const agentRuns: AgentRun[] = [
+    intake.run,
+    vision.run,
+    logs.run,
+    api.run,
+    db.run,
+  ];
 
-  if (!logs.ok || !api.ok || !db.ok) {
+  const requiredVisionFailed = hasImageEvidence(incident) && !vision.ok;
+
+  if (requiredVisionFailed || !logs.ok || !api.ok || !db.ok) {
     agentRuns.push(
       dependencyFailure(
         "rca_agent",
@@ -61,6 +83,8 @@ export async function runIncidentSwarm(
       incident,
       agent_runs: agentRuns,
       outputs: {
+        intake: intake.output,
+        vision: vision.output,
         logs: logs.output,
         api: api.output,
         db: db.output,
@@ -76,6 +100,7 @@ export async function runIncidentSwarm(
     logs: logs.output,
     api: api.output,
     db: db.output,
+    vision: vision.output,
   });
   agentRuns.push(rca.run);
 
@@ -95,6 +120,8 @@ export async function runIncidentSwarm(
       incident,
       agent_runs: agentRuns,
       outputs: {
+        intake: intake.output,
+        vision: vision.output,
         logs: logs.output,
         api: api.output,
         db: db.output,
@@ -125,6 +152,8 @@ export async function runIncidentSwarm(
       incident,
       agent_runs: agentRuns,
       outputs: {
+        intake: intake.output,
+        vision: vision.output,
         logs: logs.output,
         api: api.output,
         db: db.output,
@@ -146,6 +175,8 @@ export async function runIncidentSwarm(
     incident,
     agent_runs: agentRuns,
     outputs: {
+      intake: intake.output,
+      vision: vision.output,
       logs: logs.output,
       api: api.output,
       db: db.output,

@@ -28,7 +28,11 @@ type EvidenceFormState = {
   title: string;
   module: string;
   screenshotNote: string;
+  screenshotDataUri: string;
+  screenshotFileName: string;
   videoNote: string;
+  videoFrameDataUri: string;
+  videoFileName: string;
   logs: string;
   apiResponse: string;
   dbSnapshot: string;
@@ -56,7 +60,11 @@ const emptyForm: EvidenceFormState = {
   title: "",
   module: "",
   screenshotNote: "",
+  screenshotDataUri: "",
+  screenshotFileName: "",
   videoNote: "",
+  videoFrameDataUri: "",
+  videoFileName: "",
   logs: "",
   apiResponse: "",
   dbSnapshot: "",
@@ -71,12 +79,19 @@ const requiredFields: Array<keyof EvidenceFormState> = [
   "dbSnapshot",
 ];
 
+const imageMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+const maxImageBytes = 2 * 1024 * 1024;
+
 function sampleToForm(sample: IncidentSample): EvidenceFormState {
   return {
     title: sample.title,
     module: sample.module,
     screenshotNote: sample.screenshotNote,
+    screenshotDataUri: "",
+    screenshotFileName: `${sample.id}.synthetic.png`,
     videoNote: sample.videoNote,
+    videoFrameDataUri: "",
+    videoFileName: `${sample.id}-frames.synthetic`,
     logs: sample.logs,
     apiResponse: sample.apiResponse,
     dbSnapshot: sample.dbSnapshot,
@@ -86,13 +101,30 @@ function sampleToForm(sample: IncidentSample): EvidenceFormState {
 
 function countFilledEvidence(form: EvidenceFormState, screenshotName: string) {
   return [
-    form.screenshotNote || screenshotName,
-    form.videoNote,
+    form.screenshotDataUri || form.screenshotNote || screenshotName,
+    form.videoFrameDataUri || form.videoNote,
     form.logs,
     form.apiResponse,
     form.dbSnapshot,
     form.gitDiff,
   ].filter((value) => value.trim().length > 0).length;
+}
+
+function fileToDataUri(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Unable to read the selected file."));
+    };
+    reader.onerror = () => reject(new Error("Unable to read the selected file."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function formatFieldName(field: keyof EvidenceFormState) {
@@ -106,6 +138,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [screenshotName, setScreenshotName] = useState("");
   const [videoName, setVideoName] = useState("");
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [showArchitecture, setShowArchitecture] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [submitState, setSubmitState] = useState<
@@ -136,6 +169,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setSelectedSampleId(sample.id);
     setScreenshotName(`${sample.id}.synthetic.png`);
     setVideoName(`${sample.id}-frames.synthetic`);
+    setFileErrors([]);
     setValidationErrors([]);
     setSubmitState("idle");
     setRunResult(null);
@@ -147,6 +181,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     setSelectedSampleId(null);
     setScreenshotName("");
     setVideoName("");
+    setFileErrors([]);
     setValidationErrors([]);
     setSubmitState("idle");
     setRunResult(null);
@@ -163,11 +198,66 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     );
     const errors = missing.map((field) => `${formatFieldName(field)} is required`);
 
-    if (!form.screenshotNote.trim() && !screenshotName) {
+    if (!form.screenshotNote.trim() && !form.screenshotDataUri && !screenshotName) {
       errors.push("Screenshot evidence is required");
     }
 
-    return errors;
+    return [...errors, ...fileErrors];
+  }
+
+  async function handleImageFile(file: File | undefined, field: "screenshot" | "frame") {
+    if (!file) {
+      if (field === "screenshot") {
+        setScreenshotName("");
+        updateField("screenshotDataUri", "");
+        updateField("screenshotFileName", "");
+      } else {
+        setVideoName("");
+        updateField("videoFrameDataUri", "");
+        updateField("videoFileName", "");
+      }
+
+      return;
+    }
+
+    const label = field === "screenshot" ? "Screenshot" : "Video frame";
+
+    if (file.type.startsWith("video/")) {
+      const error = `${label} upload received a video file. Upload a representative PNG, JPEG, or WebP frame instead; full video extraction is not implemented in this MVP.`;
+      setFileErrors([error]);
+      setValidationErrors([error]);
+      return;
+    }
+
+    if (!imageMimeTypes.includes(file.type as (typeof imageMimeTypes)[number])) {
+      const error = `${label} must be PNG, JPEG, or WebP.`;
+      setFileErrors([error]);
+      setValidationErrors([error]);
+      return;
+    }
+
+    if (file.size > maxImageBytes) {
+      const error = `${label} must be 2MB or smaller.`;
+      setFileErrors([error]);
+      setValidationErrors([error]);
+      return;
+    }
+
+    const dataUri = await fileToDataUri(file);
+
+    setFileErrors([]);
+    setValidationErrors([]);
+
+    if (field === "screenshot") {
+      setScreenshotName(file.name);
+      updateField("screenshotDataUri", dataUri);
+      updateField("screenshotFileName", file.name);
+      return;
+    }
+
+    setVideoName(file.name);
+    updateField("videoFrameDataUri", dataUri);
+    updateField("videoFileName", file.name);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -425,7 +515,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                       accept="image/png,image/jpeg,image/webp"
                       className="w-full text-sm"
                       onChange={(event) =>
-                        setScreenshotName(event.target.files?.[0]?.name ?? "")
+                        void handleImageFile(event.target.files?.[0], "screenshot")
                       }
                     />
                   </span>
@@ -444,7 +534,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                       accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime"
                       className="w-full text-sm"
                       onChange={(event) =>
-                        setVideoName(event.target.files?.[0]?.name ?? "")
+                        void handleImageFile(event.target.files?.[0], "frame")
                       }
                     />
                   </span>
