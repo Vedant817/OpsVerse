@@ -19,6 +19,9 @@ import {
   Video,
 } from "lucide-react";
 import { FormEvent, useMemo, useRef, useState } from "react";
+import { AgentGraph } from "@/components/agent-graph";
+import { ResultTabs } from "@/components/result-tabs";
+import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import type { IncidentSample } from "@/lib/samples";
 
 type EvidenceFormState = {
@@ -34,6 +37,19 @@ type EvidenceFormState = {
 
 type EvidenceUploaderProps = {
   samples: IncidentSample[];
+};
+
+type SwarmApiResponse = {
+  ok: boolean;
+  error: string | null;
+  result?: FinalIncidentPackage;
+  persistence?: {
+    enabled: boolean;
+    incident_id: string | null;
+    saved_agent_runs: boolean;
+    saved_speed_benchmark: boolean;
+    error: string | null;
+  };
 };
 
 const emptyForm: EvidenceFormState = {
@@ -95,7 +111,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [submitState, setSubmitState] = useState<
     "idle" | "validating" | "running" | "complete" | "failed"
   >("idle");
-  const [runResult, setRunResult] = useState<unknown>(null);
+  const [runResult, setRunResult] = useState<SwarmApiResponse | null>(null);
   const [runError, setRunError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -105,6 +121,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   );
 
   const selectedSample = samples.find((sample) => sample.id === selectedSampleId);
+  const runPackage = runResult?.result ?? null;
 
   function updateField(field: keyof EvidenceFormState, value: string) {
     setForm((current) => ({
@@ -177,7 +194,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
         },
         body: JSON.stringify(form),
       });
-      const payload = (await response.json()) as unknown;
+      const payload = (await response.json()) as SwarmApiResponse;
 
       if (!response.ok) {
         const message =
@@ -499,12 +516,17 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                     Incident swarm complete
                   </div>
                   <p className="mt-2 leading-6">
-                    The server returned structured agent output. This panel is
-                    intentionally raw until the results dashboard is built.
+                    The server returned structured agent output from the live
+                    route.
                   </p>
-                  <pre className="mt-3 max-h-96 overflow-auto rounded bg-[#082f2b] p-3 text-xs leading-5 text-[#dff7f3]">
-                    {JSON.stringify(runResult, null, 2)}
-                  </pre>
+                  {runResult?.persistence?.incident_id ? (
+                    <a
+                      href={`/dashboard/${runResult.persistence.incident_id}`}
+                      className="mt-3 inline-flex h-10 items-center rounded border border-[#b8d9d4] px-3 text-sm font-semibold hover:bg-[#dff7f3]"
+                    >
+                      Open persisted dashboard
+                    </a>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -516,9 +538,14 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                   </div>
                   <p className="mt-2 leading-6">{runError}</p>
                   {runResult ? (
-                    <pre className="mt-3 max-h-72 overflow-auto rounded bg-[#3b1f16] p-3 text-xs leading-5 text-[#ffe7dd]">
-                      {JSON.stringify(runResult, null, 2)}
-                    </pre>
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-sm font-semibold">
+                        Raw route response
+                      </summary>
+                      <pre className="mt-3 max-h-72 overflow-auto rounded bg-[#3b1f16] p-3 text-xs leading-5 text-[#ffe7dd]">
+                        {JSON.stringify(runResult, null, 2)}
+                      </pre>
+                    </details>
                   ) : null}
                 </div>
               ) : null}
@@ -543,6 +570,15 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
               </div>
             </div>
           </form>
+
+          {submitState === "running" || runPackage ? (
+            <AgentGraph
+              result={runPackage}
+              isRunning={submitState === "running"}
+            />
+          ) : null}
+
+          {runPackage ? <ResultTabs result={runPackage} /> : null}
         </div>
       </section>
     </main>

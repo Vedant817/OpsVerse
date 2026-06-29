@@ -28,6 +28,7 @@ create table if not exists public.agent_runs (
   completion_tokens integer,
   total_tokens integer,
   tokens_per_second numeric,
+  time_info jsonb,
   output jsonb,
   error text,
   created_at timestamptz not null default now()

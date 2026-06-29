@@ -7,7 +7,7 @@ import type {
   IncidentEvidence,
 } from "@/lib/cerebras/schemas";
 
-type IncidentRow = {
+export type IncidentRow = {
   id: string;
   title: string;
   module: string | null;
@@ -16,7 +16,7 @@ type IncidentRow = {
   created_at: string;
 };
 
-type EvidenceRow = {
+export type EvidenceRow = {
   id: string;
   incident_id: string;
   type: string;
@@ -25,7 +25,7 @@ type EvidenceRow = {
   created_at: string;
 };
 
-type AgentRunRow = {
+export type AgentRunRow = {
   id: string;
   incident_id: string;
   agent_name: string;
@@ -35,6 +35,7 @@ type AgentRunRow = {
   completion_tokens: number | null;
   total_tokens: number | null;
   tokens_per_second: number | null;
+  time_info: unknown;
   output: unknown;
   error: string | null;
   created_at: string;
@@ -163,6 +164,7 @@ export async function saveAgentRuns(incidentId: string, agentRuns: AgentRun[]) {
       completion_tokens: run.metrics?.completionTokens ?? null,
       total_tokens: run.metrics?.totalTokens ?? null,
       tokens_per_second: run.metrics?.tokensPerSecond ?? null,
+      time_info: run.metrics?.timeInfo ?? null,
       output: run.output,
       error: run.error,
     })),
