@@ -110,6 +110,12 @@ Open `http://127.0.0.1:3000`.
 ## Verification Commands
 
 ```bash
+npm run verify:local
+```
+
+Equivalent individual checks:
+
+```bash
 npm run typecheck
 npm run lint
 npm run build
@@ -135,6 +141,35 @@ Apply `supabase/schema.sql` to a Supabase project, then set:
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 `SUPABASE_SERVICE_ROLE_KEY` is used only from server-only modules. If Supabase is missing, incident creation returns HTTP `503` and the dashboard shows a visible configuration error instead of pretending persistence worked.
+
+## Deployment Readiness
+
+The repo includes a Vercel config and a deployment preflight:
+
+```bash
+npm run verify:deployment
+```
+
+This check verifies the repo-local personal git identity, expected local scripts, required environment variable names, Supabase schema tables, ignored local env/Vercel files, tracked secret hygiene, GitHub CLI availability, Vercel CLI availability, and git remote presence.
+
+Expected setup before a real deployment:
+
+1. Create a GitHub repo and add it as `origin`.
+2. Push with the repo-local personal git identity.
+3. Install and authenticate the Vercel CLI with `vercel login`.
+4. Link the project with `vercel link`.
+5. Configure production env vars in Vercel:
+   - `CEREBRAS_API_KEY`
+   - `CEREBRAS_BASE_URL`
+   - `CEREBRAS_MODEL`
+   - `NEXT_PUBLIC_APP_URL`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+6. Deploy with `vercel --prod`.
+7. Verify the live URL loads and the primary sample reaches the same real swarm route.
+
+Do not add a live URL to this README until the deployed app has been manually verified.
 
 ## Demo Flow
 

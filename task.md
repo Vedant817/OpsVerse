@@ -14,7 +14,7 @@ Current repository state:
 - [~] Agent swarm implemented
 - [~] Dashboard implemented
 - [~] Supabase persistence implemented
-- [ ] Deployment completed
+- [!] Deployment completed
 - [ ] Demo recorded
 - [ ] Submission posts finalized
 
@@ -1182,15 +1182,17 @@ Verification note:
 
 ### 17.1 GitHub
 
-- [ ] Create GitHub repository.
-- [ ] Push with personal git account.
-- [ ] Confirm commit authorship is personal account.
-- [ ] Keep secrets out of git.
+- [!] Create GitHub repository.
+- [!] Push with personal git account.
+- [x] Confirm commit authorship is personal account.
+- [~] Keep secrets out of git.
+- [x] Add deployment readiness checks for git identity, remote, CLI availability, env placeholders, schema, and tracked secret hygiene.
 
 ### 17.2 Vercel
 
-- [ ] Deploy app to Vercel.
-- [ ] Configure environment variables:
+- [x] Add `vercel.json` for the Next.js production build command, install command, and dev command.
+- [!] Deploy app to Vercel.
+- [!] Configure environment variables:
   - `CEREBRAS_API_KEY`
   - `CEREBRAS_BASE_URL`
   - `CEREBRAS_MODEL`
@@ -1204,7 +1206,16 @@ Acceptance criteria:
 
 - [ ] Live public URL works.
 - [ ] Primary sample incident can run end to end.
-- [ ] No secrets appear in browser, logs, README, or commits.
+- [~] No secrets appear in browser, logs, README, or commits.
+
+Verification note:
+
+- Added `vercel.json` with `npm install`, `npm run build`, and `npm run dev` commands for Vercel project configuration.
+- Added `scripts/deployment-readiness.mjs` and `npm run verify:deployment`.
+- Added `npm run verify:local` to run typecheck, lint, build, and audit in one command.
+- `npm run verify:deployment` now passes repo-local git identity, `vercel.json`, scripts, `.env.example`, Supabase schema, `.env.local` ignore, `.vercel` ignore, and tracked-secret checks. It fails on the three external prerequisites that are actually missing here: git remote, GitHub CLI, and Vercel CLI.
+- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the configured Cerebras model still returns provider `404 status code (no body)` locally.
+- Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
 ---
 
@@ -1278,17 +1289,17 @@ Target script:
 
 Run relevant checks after each implementation slice.
 
-- [ ] Type check passes.
-- [ ] Lint passes.
-- [ ] Build passes.
+- [x] Type check passes.
+- [x] Lint passes.
+- [x] Build passes.
 - [ ] Unit tests pass if tests exist.
-- [ ] Primary sample incident works locally.
-- [ ] API routes return useful errors for invalid payloads.
-- [ ] No secrets are committed.
+- [!] Primary sample incident works locally.
+- [x] API routes return useful errors for invalid payloads.
+- [~] No secrets are committed.
 - [ ] UI is responsive.
-- [ ] Agent outputs validate against schemas.
-- [ ] Speed metrics are real or clearly labeled sample.
-- [ ] Production deployment works before submission.
+- [x] Agent outputs validate against schemas.
+- [x] Speed metrics are real or clearly labeled sample.
+- [!] Production deployment works before submission.
 
 Recommended commands once the app exists:
 
@@ -1300,6 +1311,14 @@ npm test
 ```
 
 If the project uses pnpm, replace `npm` with `pnpm`.
+
+Verification note:
+
+- Added `npm run verify:local` for repeatable local quality checks.
+- Added `npm run verify:deployment` for repeatable deployment readiness checks.
+- `npm run verify:local` passed: typecheck, lint, Next.js production build, and `npm audit --audit-level=moderate`.
+- `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
+- Quality gates are still blocked from full `[x]` because the configured Cerebras model returns provider `404 status code (no body)`, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 
 ---
 
