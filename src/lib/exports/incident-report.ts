@@ -1,5 +1,6 @@
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { analyzePrDiff } from "@/lib/diff/pr-diff-analysis";
+import { retrieveRunbookMatchesForPackage } from "@/lib/runbook/synthetic-runbook";
 
 const unavailable = "Unavailable: responsible agent did not complete successfully.";
 
@@ -69,6 +70,7 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
   const tests = outputs.tests;
   const release = outputs.release;
   const prDiff = analyzePrDiff(incident.gitDiff);
+  const runbookMatches = retrieveRunbookMatchesForPackage(result);
   const metricsRows = agentRuns.map((run) =>
     [
       run.agent_name,
@@ -175,6 +177,28 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
     "### PR Diff Regression Checks",
     "",
     listOrUnavailable(prDiff.recommendedTests),
+    "",
+    "## Synthetic Runbook Matches",
+    "",
+    runbookMatches.length > 0
+      ? runbookMatches
+          .map(
+            (match) =>
+              [
+                `### ${match.title}`,
+                "",
+                `- Service: ${match.service}`,
+                `- Score: ${match.score}`,
+                `- Reason: ${match.reason}`,
+                `- Owner: ${match.escalationOwner}`,
+                "- Diagnostic checks:",
+                listOrUnavailable(match.diagnosticChecks),
+                "- Remediation steps:",
+                listOrUnavailable(match.remediationSteps),
+              ].join("\n"),
+          )
+          .join("\n\n")
+      : "- No synthetic runbook entry matched the supplied incident evidence.",
     "",
     "## Evidence",
     "",

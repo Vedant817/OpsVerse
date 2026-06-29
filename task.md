@@ -1225,7 +1225,7 @@ Only start these after the MVP is locally working and deployable.
 - [x] Download incident report as PDF.
 - [x] Slack-style incident timeline.
 - [ ] Baseline comparison with Gemini.
-- [ ] RAG from synthetic runbook.
+- [x] RAG from synthetic runbook.
 - [ ] Ask follow-up chat over incident evidence.
 
 Acceptance criteria:
@@ -1246,6 +1246,9 @@ Verification note:
 - Added `src/lib/diff/pr-diff-analysis.ts` and `src/components/pr-diff-analysis.tsx` to analyze supplied Git diff evidence for touched files, changed fields, removed null/default fallbacks, risk findings, and recommended regression checks.
 - Added a `PR Diff` result tab and included the analysis in the incident report export; the UI states clearly that no live GitHub API integration is claimed.
 - Added `tests/pr-diff-analysis.test.ts` covering fallback-removal detection, no-diff empty state, and exported report inclusion.
+- Added `src/lib/runbook/synthetic-runbook.ts` with checked-in synthetic runbook entries and deterministic retrieval over supplied incident evidence.
+- Added a `Runbook` result tab and included synthetic runbook matches in incident report exports; the UI states clearly that this is not a live vector database.
+- Added `tests/synthetic-runbook.test.ts` covering match ranking, no-match empty state, and exported report inclusion.
 
 ---
 

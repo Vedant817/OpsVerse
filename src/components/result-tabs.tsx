@@ -14,6 +14,7 @@ import { IncidentTimeline } from "@/components/incident-timeline";
 import { JiraOutput } from "@/components/jira-output";
 import { PrDiffAnalysis } from "@/components/pr-diff-analysis";
 import { ReleaseGate } from "@/components/release-gate";
+import { RunbookMatches } from "@/components/runbook-matches";
 import { SpeedMetrics } from "@/components/speed-metrics";
 import {
   buildIncidentReportPdf,
@@ -34,6 +35,7 @@ const tabs = [
   "Speed Metrics",
   "Timeline",
   "PR Diff",
+  "Runbook",
   "Submission",
 ] as const;
 
@@ -318,6 +320,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
 
         {activeTab === "PR Diff" ? (
           <PrDiffAnalysis result={result} />
+        ) : null}
+
+        {activeTab === "Runbook" ? (
+          <RunbookMatches result={result} />
         ) : null}
 
         {activeTab === "Submission" ? (
