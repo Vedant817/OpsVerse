@@ -144,12 +144,127 @@ const maxVideoBytes = 30 * 1024 * 1024;
 const extractedVideoFrameCount = 3;
 const maxExtractedFrameWidth = 960;
 
-function sampleToForm(sample: IncidentSample): EvidenceFormState {
+function wrapCanvasText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  const words = text.split(/\s+/);
+  let line = "";
+  let currentY = y;
+
+  for (const word of words) {
+    const nextLine = line ? `${line} ${word}` : word;
+    if (context.measureText(nextLine).width > maxWidth && line) {
+      context.fillText(line, x, currentY);
+      line = word;
+      currentY += lineHeight;
+    } else {
+      line = nextLine;
+    }
+  }
+
+  if (line) {
+    context.fillText(line, x, currentY);
+  }
+
+  return currentY + lineHeight;
+}
+
+function sampleScreenshotDataUri(sample: IncidentSample) {
+  if (sample.id !== "cart-summary-failure") {
+    return "";
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 960;
+  canvas.height = 620;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return "";
+  }
+
+  context.fillStyle = "#f4f2ea";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#111111";
+  context.fillRect(0, 0, canvas.width, 72);
+  context.fillStyle = "#f7f7f2";
+  context.font = "600 28px Arial";
+  context.fillText(sample.module, 32, 46);
+  context.font = "16px Arial";
+  context.fillStyle = "#d8d6c8";
+  context.fillText("Synthetic Direct Orders evidence", 760, 46);
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(32, 108, 896, 410);
+  context.strokeStyle = "#d6d1bf";
+  context.lineWidth = 2;
+  context.strokeRect(32, 108, 896, 410);
+
+  context.fillStyle = "#161616";
+  context.font = "700 32px Arial";
+  context.fillText("Cart", 60, 158);
+  context.font = "18px Arial";
+  context.fillStyle = "#625d52";
+  context.fillText("Outlet 1000023", 60, 190);
+
+  const rows = [
+    ["SKU 13321", "Case 1 / Piece 12", "confirmedQty: null"],
+    ["SKU 14498", "Case 0 / Piece 6", "confirmedQty: 0"],
+  ];
+  rows.forEach((row, index) => {
+    const y = 232 + index * 82;
+    context.fillStyle = index === 0 ? "#fff4ed" : "#fbfaf5";
+    context.fillRect(60, y, 840, 58);
+    context.strokeStyle = index === 0 ? "#f0b89d" : "#e2decf";
+    context.strokeRect(60, y, 840, 58);
+    context.fillStyle = "#161616";
+    context.font = "700 18px Arial";
+    context.fillText(row[0], 84, y + 36);
+    context.font = "16px Arial";
+    context.fillStyle = "#4f4a40";
+    context.fillText(row[1], 320, y + 36);
+    context.fillStyle = index === 0 ? "#9a3412" : "#4f4a40";
+    context.fillText(row[2], 620, y + 36);
+  });
+
+  context.fillStyle = "#116d6e";
+  context.fillRect(640, 414, 260, 54);
+  context.fillStyle = "#ffffff";
+  context.font = "700 18px Arial";
+  context.fillText("Proceed to Summary", 690, 448);
+
+  context.fillStyle = "#fff4ed";
+  context.fillRect(60, 538, 840, 48);
+  context.strokeStyle = "#f0b89d";
+  context.strokeRect(60, 538, 840, 48);
+  context.fillStyle = "#9a3412";
+  context.font = "16px Arial";
+  wrapCanvasText(
+    context,
+    "After Proceed to Summary is selected, the cart remains visible and no frontend validation error is shown.",
+    82,
+    568,
+    790,
+    20,
+  );
+
+  return canvas.toDataURL("image/png");
+}
+
+function sampleToForm(
+  sample: IncidentSample,
+  screenshotDataUri = "",
+): EvidenceFormState {
   return {
     title: sample.title,
     module: sample.module,
     screenshotNote: sample.screenshotNote,
-    screenshotDataUri: "",
+    screenshotDataUri,
     screenshotFileName: `${sample.id}.synthetic.png`,
     videoNote: sample.videoNote,
     videoFrameDataUri: "",
@@ -406,7 +521,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   }
 
   function loadSample(sample: IncidentSample) {
-    setForm(sampleToForm(sample));
+    const screenshotDataUri = sampleScreenshotDataUri(sample);
+    setForm(sampleToForm(sample, screenshotDataUri));
     setSelectedSampleId(sample.id);
     setScreenshotName(`${sample.id}.synthetic.png`);
     setVideoName(`${sample.id}-frames.synthetic`);

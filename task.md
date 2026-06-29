@@ -281,7 +281,8 @@ Acceptance criteria:
 Verification note:
 
 - Added typed sample evidence in `src/lib/samples/cart-summary-failure.ts`.
-- The intake UI loads this sample through `loadSample`, filling title, module, screenshot note, video note, logs, API response, DB snapshot, and git diff.
+- The intake UI loads this sample through `loadSample`, filling title, module, screenshot note, a canvas-generated synthetic PNG screenshot data URI, video note, logs, API response, DB snapshot, and git diff.
+- Browser smoke verified `Run Demo Incident` displays `cart-summary-failure.synthetic.png` and submitting the sample reaches the Vision Agent model call path instead of skipping Vision for missing image evidence.
 - RCA shape is blocked until the configured Cerebras model returns successful live responses; the orchestrator and RCA agent code now exist.
 
 ### 5.2 Additional Samples
@@ -643,6 +644,7 @@ Verification note:
 
 - Added `src/lib/cerebras/image.ts` with server-side validation for PNG, JPEG, and WebP data URIs up to 2MB.
 - The intake UI now reads selected PNG/JPEG/WebP screenshots or frame images into base64 data URIs and includes them in `/api/agents/run`.
+- The demo sample loader now generates a synthetic PNG screenshot in-browser using canvas and sends it through the same `screenshotDataUri` path as uploaded images.
 - The intake UI now accepts video files up to 30MB, extracts three representative frames in the browser using a temporary video element and canvas, and sends them as `videoFrameDataUris` through the same API path.
 - The server validates every extracted video frame data URI before persistence or model calls.
 - Supabase persistence stores extracted frame arrays as `video_frame_data_uris`, and dashboard reconstruction loads them back into the final incident package.
@@ -652,6 +654,7 @@ Verification note:
 - HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the current provider key does not list `gemma-4-31b`, and the route returned a structured failed Vision run rather than fake image output.
 - HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current model-unavailable provider path.
 - Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
+- Browser smoke with local Chrome loaded the primary demo sample, verified the synthetic screenshot filename renders, submitted the sample, and confirmed Vision fails on the real model-unavailable path rather than `Vision skipped because no screenshot image...`.
 
 ---
 
@@ -714,6 +717,7 @@ Verification note:
 - If image/frame evidence is supplied and Vision fails, RCA/Test/Release are gated rather than proceeding with fake visual analysis.
 - Live successful Vision output remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 - HTTP smoke with a valid PNG data URI verified `vision_agent` executes and returns the live model-unavailable failure; `rca_agent` is skipped because required image evidence failed.
+- Browser smoke verified the loaded primary demo sample includes generated screenshot evidence, so `vision_agent` attempts the real multimodal model path and fails only because `gemma-4-31b` is unavailable for the current key.
 
 ### 9.3 Log Analysis Agent
 
