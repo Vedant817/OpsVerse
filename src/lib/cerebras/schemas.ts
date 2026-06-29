@@ -8,6 +8,7 @@ export const incidentEvidenceSchema = z.object({
   screenshotFileName: z.string().trim().optional().default(""),
   videoNote: z.string().trim().optional().default(""),
   videoFrameDataUri: z.string().trim().optional().default(""),
+  videoFrameDataUris: z.array(z.string().trim()).optional().default([]),
   videoFileName: z.string().trim().optional().default(""),
   logs: z.string().trim().min(1, "Logs are required"),
   apiResponse: z.string().trim().min(1, "API response is required"),

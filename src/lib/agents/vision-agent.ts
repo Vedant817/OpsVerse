@@ -59,15 +59,25 @@ function failedRun(message: string): VisionAgentFailure {
   };
 }
 
+function imageEvidence(incident: IncidentEvidence) {
+  const images = [
+    validateImageDataUri(incident.screenshotDataUri, "Screenshot image"),
+    ...incident.videoFrameDataUris.map((dataUri, index) =>
+      validateImageDataUri(dataUri, `Video frame image ${index + 1}`),
+    ),
+    validateImageDataUri(incident.videoFrameDataUri, "Video frame image"),
+  ].filter((image): image is NonNullable<typeof image> => Boolean(image));
+
+  return images.slice(0, 4);
+}
+
 export async function runVisionAgent(
   incident: IncidentEvidence,
 ): Promise<VisionAgentSuccess | VisionAgentFailure> {
   const parsedIncident = incidentEvidenceSchema.parse(incident);
-  const image =
-    validateImageDataUri(parsedIncident.screenshotDataUri, "Screenshot image") ??
-    validateImageDataUri(parsedIncident.videoFrameDataUri, "Video frame image");
+  const images = imageEvidence(parsedIncident);
 
-  if (!image) {
+  if (images.length === 0) {
     return failedRun(
       "Vision skipped because no screenshot image or representative video frame was supplied.",
     );
@@ -81,12 +91,12 @@ export async function runVisionAgent(
           type: "text",
           text: buildVisionAgentPrompt(parsedIncident),
         },
-        {
+        ...images.map((image) => ({
           type: "image_url",
           image_url: {
             url: image.dataUri,
           },
-        },
+        }) as const),
       ],
     },
   ];

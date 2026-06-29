@@ -97,6 +97,15 @@ function evidenceRows(incidentId: string, incident: IncidentEvidence) {
     },
     {
       incident_id: incidentId,
+      type: "video_frame_data_uris",
+      content:
+        incident.videoFrameDataUris.length > 0
+          ? JSON.stringify(incident.videoFrameDataUris)
+          : null,
+      file_url: null,
+    },
+    {
+      incident_id: incidentId,
       type: "video_file_name",
       content: incident.videoFileName || null,
       file_url: null,
@@ -138,6 +147,21 @@ function latestEvidenceByType(evidence: EvidenceRow[]) {
   }
 
   return values;
+}
+
+function parseEvidenceArray(value: string | undefined) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function createIncident(incident: IncidentEvidence) {
@@ -278,6 +302,7 @@ export async function loadIncidentEvidence(
     screenshotFileName: evidence.get("screenshot_file_name") ?? "",
     videoNote: evidence.get("video_note") ?? "",
     videoFrameDataUri: evidence.get("video_frame_data_uri") ?? "",
+    videoFrameDataUris: parseEvidenceArray(evidence.get("video_frame_data_uris")),
     videoFileName: evidence.get("video_file_name") ?? "",
     logs: evidence.get("logs") ?? "",
     apiResponse: evidence.get("api_response") ?? "",

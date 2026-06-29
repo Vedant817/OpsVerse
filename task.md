@@ -618,7 +618,7 @@ Verification note:
 - [x] Send screenshot to Vision Agent using multimodal message content.
 - [x] Validate file type and size.
 - [x] For video, do not send the full video directly.
-- [ ] For video stretch work, extract 3-5 representative frames:
+- [x] For video stretch work, extract 3-5 representative frames:
   - before action
   - clicked button
   - error/stuck state
@@ -633,11 +633,14 @@ Verification note:
 
 - Added `src/lib/cerebras/image.ts` with server-side validation for PNG, JPEG, and WebP data URIs up to 2MB.
 - The intake UI now reads selected PNG/JPEG/WebP screenshots or frame images into base64 data URIs and includes them in `/api/agents/run`.
-- Full video files are rejected with a clear message; users must upload a representative image frame until frame extraction is implemented.
+- The intake UI now accepts video files up to 30MB, extracts three representative frames in the browser using a temporary video element and canvas, and sends them as `videoFrameDataUris` through the same API path.
+- The server validates every extracted video frame data URI before persistence or model calls.
+- Supabase persistence stores extracted frame arrays as `video_frame_data_uris`, and dashboard reconstruction loads them back into the final incident package.
 - `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
 - Live screenshot analysis remains blocked because the configured Cerebras model currently returns provider errors.
 - HTTP smoke verified invalid `data:text/plain` screenshot evidence returns HTTP 400 with a clear MIME error.
 - HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the live provider returned `404 status code (no body)`, and the route returned a structured failed Vision run rather than fake image output.
+- HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current provider `404 status code (no body)`.
 - Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
 
 ---

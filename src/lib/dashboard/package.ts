@@ -29,6 +29,21 @@ function latestEvidenceByType(record: IncidentDashboardRecord) {
   return evidence;
 }
 
+function parseEvidenceArray(value: string | undefined) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function incidentFromRecord(record: IncidentDashboardRecord): IncidentEvidence {
   const evidence = latestEvidenceByType(record);
 
@@ -40,6 +55,7 @@ function incidentFromRecord(record: IncidentDashboardRecord): IncidentEvidence {
     screenshotFileName: evidence.get("screenshot_file_name") ?? "",
     videoNote: evidence.get("video_note") ?? "",
     videoFrameDataUri: evidence.get("video_frame_data_uri") ?? "",
+    videoFrameDataUris: parseEvidenceArray(evidence.get("video_frame_data_uris")),
     videoFileName: evidence.get("video_file_name") ?? "",
     logs: evidence.get("logs") ?? "",
     apiResponse: evidence.get("api_response") ?? "",

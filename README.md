@@ -18,7 +18,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 
 - Load three synthetic incident samples.
 - Upload PNG, JPEG, or WebP screenshot/frame evidence up to 2MB.
-- Reject full video files clearly instead of pretending frame extraction exists.
+- Upload a video file up to 30MB and extract three representative browser-side frames for Vision.
 - Run a server-side incident swarm through `/api/agents/run`.
 - Stream live agent progress through `/api/agents/stream`.
 - Show runtime readiness for Cerebras, Supabase, and public app URL without exposing secrets.

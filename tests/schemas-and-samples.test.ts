@@ -26,6 +26,9 @@ const baseIncident = {
   screenshotFileName: "cart-summary.synthetic.png",
   videoNote: primaryIncidentSample.videoNote,
   videoFrameDataUri: "",
+  videoFrameDataUris: [
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  ],
   videoFileName: "cart-summary-frame.synthetic.png",
   logs: primaryIncidentSample.logs,
   apiResponse: primaryIncidentSample.apiResponse,
@@ -217,5 +220,6 @@ test("final incident packages require all schema-backed output sections", () => 
   });
 
   assert.equal(parsed.outputs.release?.release_gate, "BLOCK");
+  assert.equal(parsed.incident.videoFrameDataUris.length, 1);
   assert.equal(parsed.agent_runs[0].metrics?.totalTokens, 180);
 });

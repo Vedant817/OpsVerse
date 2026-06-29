@@ -65,10 +65,15 @@ export function validateImageDataUri(dataUri: string, label: string) {
 export function validateIncidentImageEvidence({
   screenshotDataUri,
   videoFrameDataUri,
+  videoFrameDataUris,
 }: {
   screenshotDataUri?: string;
   videoFrameDataUri?: string;
+  videoFrameDataUris?: string[];
 }) {
   validateImageDataUri(screenshotDataUri ?? "", "Screenshot image");
   validateImageDataUri(videoFrameDataUri ?? "", "Video frame image");
+  for (const [index, dataUri] of (videoFrameDataUris ?? []).entries()) {
+    validateImageDataUri(dataUri, `Video frame image ${index + 1}`);
+  }
 }

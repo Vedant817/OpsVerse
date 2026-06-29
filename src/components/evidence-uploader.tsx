@@ -31,6 +31,7 @@ type EvidenceFormState = {
   screenshotFileName: string;
   videoNote: string;
   videoFrameDataUri: string;
+  videoFrameDataUris: string[];
   videoFileName: string;
   logs: string;
   apiResponse: string;
@@ -109,6 +110,7 @@ const emptyForm: EvidenceFormState = {
   screenshotFileName: "",
   videoNote: "",
   videoFrameDataUri: "",
+  videoFrameDataUris: [],
   videoFileName: "",
   logs: "",
   apiResponse: "",
@@ -116,16 +118,19 @@ const emptyForm: EvidenceFormState = {
   gitDiff: "",
 };
 
-const requiredFields: Array<keyof EvidenceFormState> = [
+const requiredFields = [
   "title",
   "module",
   "logs",
   "apiResponse",
   "dbSnapshot",
-];
+] as const satisfies ReadonlyArray<keyof EvidenceFormState>;
 
 const imageMimeTypes = ["image/png", "image/jpeg", "image/webp"];
 const maxImageBytes = 2 * 1024 * 1024;
+const maxVideoBytes = 30 * 1024 * 1024;
+const extractedVideoFrameCount = 3;
+const maxExtractedFrameWidth = 960;
 
 function sampleToForm(sample: IncidentSample): EvidenceFormState {
   return {
@@ -136,6 +141,7 @@ function sampleToForm(sample: IncidentSample): EvidenceFormState {
     screenshotFileName: `${sample.id}.synthetic.png`,
     videoNote: sample.videoNote,
     videoFrameDataUri: "",
+    videoFrameDataUris: [],
     videoFileName: `${sample.id}-frames.synthetic`,
     logs: sample.logs,
     apiResponse: sample.apiResponse,
@@ -147,7 +153,9 @@ function sampleToForm(sample: IncidentSample): EvidenceFormState {
 function countFilledEvidence(form: EvidenceFormState, screenshotName: string) {
   return [
     form.screenshotDataUri || form.screenshotNote || screenshotName,
-    form.videoFrameDataUri || form.videoNote,
+    form.videoFrameDataUris.length > 0
+      ? "video frames"
+      : form.videoFrameDataUri || form.videoNote,
     form.logs,
     form.apiResponse,
     form.dbSnapshot,
@@ -170,6 +178,88 @@ function fileToDataUri(file: File) {
     reader.onerror = () => reject(new Error("Unable to read the selected file."));
     reader.readAsDataURL(file);
   });
+}
+
+function waitForEvent(target: EventTarget, eventName: string) {
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      target.removeEventListener(eventName, onEvent);
+      target.removeEventListener("error", onError);
+    };
+    const onEvent = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("Unable to read the selected video file."));
+    };
+
+    target.addEventListener(eventName, onEvent, { once: true });
+    target.addEventListener("error", onError, { once: true });
+  });
+}
+
+async function seekVideo(video: HTMLVideoElement, time: number) {
+  const seeked = waitForEvent(video, "seeked");
+  video.currentTime = time;
+  await seeked;
+}
+
+function captureVideoFrame(video: HTMLVideoElement) {
+  const width = Math.min(video.videoWidth, maxExtractedFrameWidth);
+  const height = Math.max(1, Math.round((width / video.videoWidth) * video.videoHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Unable to extract a frame from the selected video.");
+  }
+
+  context.drawImage(video, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+async function extractVideoFrames(file: File) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+
+  try {
+    video.src = url;
+    await waitForEvent(video, "loadedmetadata");
+
+    if (!Number.isFinite(video.duration) || video.duration <= 0) {
+      throw new Error("Unable to read duration from the selected video.");
+    }
+
+    const timestamps = Array.from(
+      { length: extractedVideoFrameCount },
+      (_, index) => {
+        const ratio = (index + 1) / (extractedVideoFrameCount + 1);
+        return Math.min(
+          Math.max(video.duration * ratio, 0.1),
+          Math.max(video.duration - 0.1, 0),
+        );
+      },
+    );
+    const frames: string[] = [];
+
+    for (const timestamp of timestamps) {
+      await seekVideo(video, timestamp);
+      frames.push(captureVideoFrame(video));
+    }
+
+    return frames;
+  } finally {
+    URL.revokeObjectURL(url);
+    video.removeAttribute("src");
+    video.load();
+  }
 }
 
 function formatFieldName(field: keyof EvidenceFormState) {
@@ -285,7 +375,10 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     return () => controller.abort();
   }, []);
 
-  function updateField(field: keyof EvidenceFormState, value: string) {
+  function updateField<K extends keyof EvidenceFormState>(
+    field: K,
+    value: EvidenceFormState[K],
+  ) {
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -349,6 +442,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
       } else {
         setVideoName("");
         updateField("videoFrameDataUri", "");
+        updateField("videoFrameDataUris", []);
         updateField("videoFileName", "");
       }
 
@@ -358,9 +452,43 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
     const label = field === "screenshot" ? "Screenshot" : "Video frame";
 
     if (file.type.startsWith("video/")) {
-      const error = `${label} upload received a video file. Upload a representative PNG, JPEG, or WebP frame instead; full video extraction is not implemented in this MVP.`;
-      setFileErrors([error]);
-      setValidationErrors([error]);
+      if (field === "screenshot") {
+        const error =
+          "Screenshot upload received a video file. Upload a PNG, JPEG, or WebP screenshot instead.";
+        setFileErrors([error]);
+        setValidationErrors([error]);
+        return;
+      }
+
+      if (file.size > maxVideoBytes) {
+        const error = `Video must be ${maxVideoBytes / (1024 * 1024)}MB or smaller for browser frame extraction.`;
+        setFileErrors([error]);
+        setValidationErrors([error]);
+        return;
+      }
+
+      try {
+        const frames = await extractVideoFrames(file);
+        setVideoName(`${file.name} (${frames.length} frames extracted)`);
+        updateField("videoFrameDataUri", frames[0] ?? "");
+        updateField("videoFrameDataUris", frames);
+        updateField("videoFileName", file.name);
+        if (!form.videoNote.trim()) {
+          updateField(
+            "videoNote",
+            `Extracted ${frames.length} representative frames from ${file.name}.`,
+          );
+        }
+        setFileErrors([]);
+        setValidationErrors([]);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to extract frames from the selected video.";
+        setFileErrors([message]);
+        setValidationErrors([message]);
+      }
       return;
     }
 
@@ -392,6 +520,7 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
 
     setVideoName(file.name);
     updateField("videoFrameDataUri", dataUri);
+    updateField("videoFrameDataUris", [dataUri]);
     updateField("videoFileName", file.name);
   }
 
@@ -690,6 +819,13 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                   {videoName ? (
                     <span className="font-mono text-xs text-[#116d6e]">
                       {videoName}
+                    </span>
+                  ) : null}
+                  {form.videoFrameDataUris.length > 0 ? (
+                    <span className="text-xs font-normal text-[#625d52]">
+                      {form.videoFrameDataUris.length} representative frame
+                      {form.videoFrameDataUris.length === 1 ? "" : "s"} ready for
+                      Vision.
                     </span>
                   ) : null}
                 </label>
