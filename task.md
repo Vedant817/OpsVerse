@@ -578,6 +578,8 @@ Verification note:
 - Added `src/lib/cerebras/schemas.ts` with schemas for intake, vision, log, API, DB, RCA, regression test, release risk, narrator, agent runs, and final incident package.
 - Added schema validation in `src/lib/agents/structured-agent.ts`.
 - Malformed/non-schema model output is returned as a failed agent run instead of guessed output.
+- Added `tests/schemas-and-samples.test.ts` with representative Vision, Log, API, DB, RCA, Regression Test, Release Risk, Demo Narrator, agent-run, and final-package schema validation.
+- `npm test` passed with 4 tests covering bundled sample evidence, representative agent output schemas, invalid release-gate rejection, and final incident package validation.
 - Live valid-model JSON parsing is blocked because the configured Cerebras model currently returns `404 status code (no body)`.
 
 ### 8.3 Prompt Templates
@@ -1315,7 +1317,7 @@ Run relevant checks after each implementation slice.
 - [x] Type check passes.
 - [x] Lint passes.
 - [x] Build passes.
-- [ ] Unit tests pass if tests exist.
+- [x] Unit tests pass if tests exist.
 - [!] Primary sample incident works locally.
 - [x] API routes return useful errors for invalid payloads.
 - [~] No secrets are committed.
@@ -1339,7 +1341,10 @@ Verification note:
 
 - Added `npm run verify:local` for repeatable local quality checks.
 - Added `npm run verify:deployment` for repeatable deployment readiness checks.
-- `npm run verify:local` passed after the streaming slice: typecheck, lint, Next.js production build, and `npm audit --audit-level=moderate`.
+- Added `npm test` using Node's built-in test runner with `tsx`.
+- Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
+- `npm test` passed with 4 tests.
+- `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
 - Quality gates are still blocked from full `[x]` because the configured Cerebras model returns provider `404 status code (no body)`, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 
