@@ -198,7 +198,8 @@ export function buildReleaseAgentPrompt({
 You are the Release Risk Agent.
 
 Decide whether the release should PASS, WARN, or BLOCK. Consider business impact,
-affected flow, confidence, missing evidence, API contract risk, and DB consistency risk.
+affected flow, severity signal, confidence, missing evidence, API contract risk,
+DB consistency risk, and available or missing regression-test coverage.
 Regression tests run in parallel; recommend the required test coverage instead of
 depending on generated test output.
 

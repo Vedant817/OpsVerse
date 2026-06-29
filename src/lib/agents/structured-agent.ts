@@ -2,6 +2,7 @@ import "server-only";
 
 import type { z } from "zod";
 import { runGemmaAgent } from "@/lib/cerebras/client";
+import { parseStructuredJson } from "@/lib/cerebras/json";
 import type { AgentRun } from "@/lib/cerebras/schemas";
 
 type StructuredAgentSuccess<T> = {
@@ -19,27 +20,6 @@ type StructuredAgentFailure = {
 export type StructuredAgentResult<T> =
   | StructuredAgentSuccess<T>
   | StructuredAgentFailure;
-
-function extractJsonObject(content: string) {
-  const trimmed = content.trim();
-
-  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-    return trimmed;
-  }
-
-  const firstBrace = trimmed.indexOf("{");
-  const lastBrace = trimmed.lastIndexOf("}");
-
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return trimmed.slice(firstBrace, lastBrace + 1);
-  }
-
-  return trimmed;
-}
-
-function parseJson(content: string): unknown {
-  return JSON.parse(extractJsonObject(content));
-}
 
 export async function runStructuredAgent<T>({
   agentName,
@@ -64,8 +44,7 @@ export async function runStructuredAgent<T>({
       reasoningEffort: "none",
     });
 
-    const parsed = parseJson(result.content);
-    const output = schema.parse(parsed);
+    const output = parseStructuredJson(result.content, schema);
 
     return {
       ok: true,

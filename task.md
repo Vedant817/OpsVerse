@@ -578,7 +578,7 @@ Verification note:
 
 Acceptance criteria:
 
-- [!] Valid model JSON is parsed into typed objects.
+- [x] Valid model JSON is parsed into typed objects.
 - [x] Invalid JSON does not crash the app.
 - [x] UI shows failed agent state when validation fails.
 
@@ -588,13 +588,15 @@ Verification note:
 - Added schema validation in `src/lib/agents/structured-agent.ts`.
 - Malformed/non-schema model output is returned as a failed agent run instead of guessed output.
 - Added `tests/schemas-and-samples.test.ts` with representative Vision, Log, API, DB, RCA, Regression Test, Release Risk, Demo Narrator, agent-run, and final-package schema validation.
-- `npm test` passed with 4 tests covering bundled sample evidence, representative agent output schemas, invalid release-gate rejection, and final incident package validation.
-- Live valid-model JSON parsing is blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
+- Added `src/lib/cerebras/json.ts` and moved Vision/text agent JSON parsing to the shared production parser.
+- Added `tests/agent-contracts.test.ts` to verify mocked model JSON with wrapper text is parsed into typed outputs for every prompt/schema pair.
+- `npm test` passed with 6 tests covering bundled sample evidence, representative agent output schemas, mocked prompt/schema parsing, required confidence fields, invalid release-gate rejection, and final incident package validation.
+- Live Gemma JSON generation remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model, but valid model JSON parsing is now verified through the same parser used by runtime agents.
 
 ### 8.3 Prompt Templates
 
 - [x] Implement `lib/cerebras/prompts.ts`.
-- [~] Include prompts for:
+- [x] Include prompts for:
   - Vision Triage Agent
   - Log Analysis Agent
   - API Contract Agent
@@ -609,14 +611,15 @@ Verification note:
 
 Acceptance criteria:
 
-- [!] Each prompt produces output matching its schema in a live or mocked test.
-- [!] Outputs include confidence where required.
+- [x] Each prompt produces output matching its schema in a live or mocked test.
+- [x] Outputs include confidence where required.
 
 Verification note:
 
-- Added prompts in `src/lib/cerebras/prompts.ts` for Vision, Log, API, DB, RCA, Regression Test, and Release Risk agents.
-- Narrator schema exists, but its runnable prompt/agent remains future work.
-- Live prompt verification is blocked by Cerebras returning 404 for the configured model.
+- Added prompts in `src/lib/cerebras/prompts.ts` for Vision, Log, API, DB, RCA, Regression Test, Release Risk, and Demo Narrator agents.
+- Added mocked contract tests that build every prompt, assert required output-field terms are present, and validate schema-correct mocked model JSON through the production parser.
+- Added required-confidence rejection tests for Vision, Log, API, DB, RCA, and RCA hypotheses.
+- Live prompt verification remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 
 ### 8.4 Image Handling
 
@@ -644,7 +647,7 @@ Verification note:
 - The server validates every extracted video frame data URI before persistence or model calls.
 - Supabase persistence stores extracted frame arrays as `video_frame_data_uris`, and dashboard reconstruction loads them back into the final incident package.
 - `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
-- Live screenshot analysis remains blocked because the configured Cerebras model currently returns provider errors.
+- Live screenshot analysis remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
 - HTTP smoke verified invalid `data:text/plain` screenshot evidence returns HTTP 400 with a clear MIME error.
 - HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the current provider key does not list `gemma-4-31b`, and the route returned a structured failed Vision run rather than fake image output.
 - HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current model-unavailable provider path.
@@ -727,11 +730,11 @@ Verification note:
 
 Expected output fields:
 
-- [ ] `primary_error`
-- [ ] `service`
-- [ ] `correlation_id`
-- [ ] `timestamp`
-- [ ] `probable_cause`
+- [x] `primary_error`
+- [x] `service`
+- [x] `correlation_id`
+- [x] `timestamp`
+- [x] `probable_cause`
 
 ### 9.4 API Contract Agent
 
@@ -749,11 +752,11 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `endpoint`
-- [ ] `status`
-- [ ] `contract_violation`
-- [ ] `breaking_field`
-- [ ] `suggested_fix`
+- [x] `endpoint`
+- [x] `status`
+- [x] `contract_violation`
+- [x] `breaking_field`
+- [x] `suggested_fix`
 
 ### 9.5 DB Consistency Agent
 
@@ -768,9 +771,9 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `suspected_tables`
-- [ ] `data_issue`
-- [ ] `sql_checks`
+- [x] `suspected_tables`
+- [x] `data_issue`
+- [x] `sql_checks`
 
 ### 9.6 Root Cause Agent
 
@@ -783,10 +786,10 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `root_cause_summary`
-- [ ] `confidence`
-- [ ] `evidence_links`
-- [ ] `alternative_hypotheses`
+- [x] `root_cause_summary`
+- [x] `confidence`
+- [x] `evidence_links`
+- [x] `alternative_hypotheses`
 
 ### 9.7 Regression Test Agent
 
@@ -801,10 +804,10 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `karate_test`
-- [ ] `postman_assertions`
-- [ ] `sql_validation`
-- [ ] `manual_qa_steps`
+- [x] `karate_test`
+- [x] `postman_assertions`
+- [x] `sql_validation`
+- [x] `manual_qa_steps`
 
 ### 9.8 Release Risk Agent
 
@@ -813,7 +816,7 @@ Expected output fields:
   - PASS
   - WARN
   - BLOCK
-- [ ] Consider:
+- [x] Consider:
   - business impact
   - affected flow
   - severity
@@ -823,11 +826,11 @@ Expected output fields:
 
 Expected output fields:
 
-- [ ] `release_gate`
-- [ ] `risk_score`
-- [ ] `reason`
-- [ ] `must_fix_before_release`
-- [ ] `recommended_tests`
+- [x] `release_gate`
+- [x] `risk_score`
+- [x] `reason`
+- [x] `must_fix_before_release`
+- [x] `recommended_tests`
 
 Verification note:
 
@@ -836,6 +839,7 @@ Verification note:
 - `/api/agents/run` validates incident evidence, runs Log/API/DB agents in parallel, gates RCA/Test/Release on dependencies, and returns partial failed agent runs when provider calls fail.
 - With `.env.local` loaded, the provider model list does not include the configured `gemma-4-31b`, so the route correctly returns HTTP 502 with failed agent diagnostics instead of fake RCA output.
 - The UI Run button now calls `/api/agents/run` and displays the real structured success/failure payload.
+- `tests/agent-contracts.test.ts` verifies Log, API, DB, RCA, Regression Test, and Release Risk expected output fields through mocked model JSON and the production parser.
 
 ### 9.9 Demo Narrator Agent
 
@@ -1400,7 +1404,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` passed with 4 tests.
+- `npm test` passed with 6 tests.
 - `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.

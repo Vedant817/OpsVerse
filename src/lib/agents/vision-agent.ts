@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { runGemmaAgent } from "@/lib/cerebras/client";
+import { parseStructuredJson } from "@/lib/cerebras/json";
 import { buildVisionAgentPrompt } from "@/lib/cerebras/prompts";
 import {
   incidentEvidenceSchema,
@@ -23,27 +24,6 @@ type VisionAgentFailure = {
   output: null;
   run: AgentRun;
 };
-
-function extractJsonObject(content: string) {
-  const trimmed = content.trim();
-
-  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-    return trimmed;
-  }
-
-  const firstBrace = trimmed.indexOf("{");
-  const lastBrace = trimmed.lastIndexOf("}");
-
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return trimmed.slice(firstBrace, lastBrace + 1);
-  }
-
-  return trimmed;
-}
-
-function parseJson(content: string): unknown {
-  return JSON.parse(extractJsonObject(content));
-}
 
 function failedRun(message: string): VisionAgentFailure {
   return {
@@ -109,7 +89,7 @@ export async function runVisionAgent(
       },
       reasoningEffort: "none",
     });
-    const output = visionOutputSchema.parse(parseJson(result.content));
+    const output = parseStructuredJson(result.content, visionOutputSchema);
 
     return {
       ok: true,
