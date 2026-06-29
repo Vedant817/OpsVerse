@@ -849,6 +849,7 @@ Verification note:
 
 - Added `src/lib/agents/narrator-agent.ts` and the narrator prompt in `src/lib/cerebras/prompts.ts`.
 - The narrator runs last, after RCA, Regression Test, and Release Risk complete, and validates output with `demoNarratorOutputSchema`.
+- Added a `Submission` result tab that displays copyable demo script, Discord Track 1 post, Discord Track 3 post, and X/Twitter post only when `outputs.narrator` exists.
 - If upstream agents fail, the orchestrator records a skipped `narrator_agent` run instead of producing fake submission copy.
 - Live narrator generation remains blocked until the configured Cerebras model returns successful responses.
 - HTTP smoke verified `/api/agents/run` returns nine agent runs, including `narrator_agent`, and reports `Demo narration skipped because the incident package did not complete` on the current provider failure path.
@@ -1123,6 +1124,7 @@ Expected primary sample decision:
 Verification note:
 
 - Added result tabs for Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, and Speed Metrics.
+- Added a Submission tab for Demo Narrator output. It renders an unavailable state until the narrator agent actually completes, so static demo/submission copy is not shown as generated output.
 - Jira output is generated from actual incident package data and explicitly says when agent-derived fields are pending.
 - Release output renders only completed release-agent data; otherwise it shows an unavailable state instead of inventing a PASS/WARN/BLOCK decision.
 
@@ -1272,7 +1274,7 @@ Verification note:
 
 ### 18.1 60-Second Demo
 
-- [ ] Record under 60 seconds.
+- [!] Record under 60 seconds.
 - [ ] Show landing page.
 - [ ] Show upload/sample evidence.
 - [ ] Show agent swarm running.
@@ -1300,31 +1302,38 @@ Target script:
 
 ### 18.3 Track 1 Submission
 
-- [ ] Prepare Discord post for `#g4hackathon-multiverse-agents`.
-- [ ] Include project name.
-- [ ] Include multi-agent and multimodal explanation.
-- [ ] Include output package explanation.
+- [~] Prepare Discord post for `#g4hackathon-multiverse-agents`.
+- [~] Include project name.
+- [~] Include multi-agent and multimodal explanation.
+- [~] Include output package explanation.
 - [ ] Include demo link.
 - [ ] Include live app link.
 - [ ] Include GitHub link.
 
 ### 18.4 Track 3 Submission
 
-- [ ] Prepare Discord post for `#g4hackathon-enterprise-impact`.
-- [ ] Explain business impact:
+- [~] Prepare Discord post for `#g4hackathon-enterprise-impact`.
+- [~] Explain business impact:
   - Faster incident triage.
   - Better QA handoff.
   - Auto-generated regression tests.
   - Jira-ready bug reports.
   - Release gate decisions.
   - Reduced production risk.
-- [ ] Explain production-readiness:
+- [~] Explain production-readiness:
   - Server-side API key handling.
   - Structured outputs.
   - Agent-level audit trail.
   - Stored incident history.
   - Reproducible test generation.
   - Deployment-ready Next.js + Supabase + Vercel architecture.
+
+Verification note:
+
+- Added a `Submission` result tab that surfaces Demo Narrator output when and only when the narrator agent has generated it from a completed incident package.
+- The tab provides copy actions for the combined submission kit, demo script, Track 1 post, and Track 3 post.
+- The tab explicitly says live app, GitHub, and demo video links must be added only after those artifacts are verified.
+- Demo recording and final submission links remain blocked until live model output, GitHub remote, Vercel deployment, and a recorded video exist.
 
 ### 18.5 Optional X/Twitter Post
 

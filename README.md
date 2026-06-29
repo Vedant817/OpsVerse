@@ -24,7 +24,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Show runtime readiness for Cerebras, Supabase, and public app URL without exposing secrets.
 - Execute deterministic Intake plus Vision, Log, API, DB, RCA, Test, Release, and Narrator agent stages.
 - Validate model output with Zod schemas and show failed-agent states when provider calls fail.
-- Render the agent graph, result tabs, Jira output, release gate, and speed metrics from route output.
+- Render the agent graph, result tabs, Jira output, release gate, speed metrics, and narrator submission output from route output.
 - Persist incidents/evidence/agent runs when Supabase is configured.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
