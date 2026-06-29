@@ -89,7 +89,7 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```bash
-CEREBRAS_API_KEY=your-server-side-key
+CEREBRAS_API_KEY=
 CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
 CEREBRAS_MODEL=gemma-4-31b
 
@@ -123,9 +123,19 @@ Equivalent individual checks:
 npm run typecheck
 npm run lint
 npm test
+npm run verify:secrets
 npm run build
 npm audit --audit-level=moderate
 ```
+
+Browser smoke check:
+
+```bash
+npm run dev -- --hostname 127.0.0.1 --port 3000
+npm run verify:ui
+```
+
+The UI check uses local Chrome through the Chrome DevTools Protocol. It verifies `/` and `/incident` at desktop and mobile widths, checks required visible copy, fails on console/runtime errors, and fails on document-level horizontal overflow.
 
 Useful API smoke checks:
 

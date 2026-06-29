@@ -123,7 +123,8 @@ Verification note:
 - `npm run build` passed.
 - `npm audit --audit-level=moderate` passed with 0 vulnerabilities after forcing patched `postcss` through npm overrides.
 - `npm run dev -- --hostname 127.0.0.1 --port 3000` started successfully and `curl -I http://127.0.0.1:3000` returned HTTP 200.
-- Full browser automation check was not run because the required `agent-browser` CLI is not installed in this environment.
+- Added `npm run verify:ui`, a dependency-free Chrome DevTools Protocol smoke check for `/` and `/incident`.
+- `npm run verify:ui` passed against a local dev server at `http://127.0.0.1:3000` for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
 
 ---
 
@@ -337,7 +338,8 @@ Verification note:
 - The product headline is now rendered through `src/components/hero.tsx` with the exact first-viewport positioning line.
 - The hero copy intentionally uses the one-line product pitch and avoids over-claiming completed live RCA/test/release output while the configured provider/model still returns `404 status code (no body)`.
 - `curl -s http://127.0.0.1:3000` showed `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
-- Full browser click/responsive verification was not run because `agent-browser` and Playwright are not installed in this environment.
+- Added `scripts/browser-smoke.mjs` so browser verification no longer depends on `agent-browser` or Playwright in this environment.
+- `npm run verify:ui` passed for `/` and `/incident` at desktop `1440x1000` and mobile `390x900`, verifying key visible copy and document-level overflow.
 
 ### 6.2 Incident Upload Page
 
@@ -503,7 +505,7 @@ Verification note:
 Acceptance criteria:
 
 - [x] Components can render with sample data.
-- [~] Components do not overflow on mobile.
+- [x] Components do not overflow on mobile.
 - [x] Core actions are keyboard accessible.
 
 Verification note:
@@ -511,6 +513,7 @@ Verification note:
 - Components use typed props, semantic buttons/links, keyboard-focusable controls, and real incident package data.
 - Added `src/components/hero.tsx` with typed action callbacks, icon buttons, exact product positioning, Gemma 4/Cerebras labeling, and synthetic-evidence labeling.
 - Local Chrome smoke at 390px viewport verified no document-level horizontal overflow after rendering the failed swarm state, agent graph, and result tabs.
+- `npm run verify:ui` passed for `/` and `/incident` at mobile `390x900` and desktop `1440x1000`, verifying no document-level horizontal overflow and no browser console/runtime errors.
 
 ---
 
@@ -1247,7 +1250,7 @@ Verification note:
 - [!] Create GitHub repository.
 - [!] Push with personal git account.
 - [x] Confirm commit authorship is personal account.
-- [~] Keep secrets out of git.
+- [x] Keep secrets out of git.
 - [x] Add deployment readiness checks for git identity, remote, CLI availability, env placeholders, schema, and tracked secret hygiene.
 
 ### 17.2 Vercel
@@ -1274,7 +1277,7 @@ Verification note:
 
 - Added `vercel.json` with `npm install`, `npm run build`, and `npm run dev` commands for Vercel project configuration.
 - Added `scripts/deployment-readiness.mjs` and `npm run verify:deployment`.
-- Added `npm run verify:local` to run typecheck, lint, build, and audit in one command.
+- Added `npm run verify:local` to run typecheck, lint, tests, tracked secret scanning, build, and audit in one command.
 - `npm run verify:deployment` now passes repo-local git identity, `vercel.json`, scripts, `.env.example`, Supabase schema, `.env.local` ignore, `.vercel` ignore, and tracked-secret checks. It fails on the three external prerequisites that are actually missing here: git remote, GitHub CLI, and Vercel CLI.
 - Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the configured Cerebras model still returns provider `404 status code (no body)` locally.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
@@ -1364,8 +1367,8 @@ Run relevant checks after each implementation slice.
 - [x] Unit tests pass if tests exist.
 - [!] Primary sample incident works locally.
 - [x] API routes return useful errors for invalid payloads.
-- [~] No secrets are committed.
-- [ ] UI is responsive.
+- [x] No secrets are committed.
+- [x] UI is responsive.
 - [x] Agent outputs validate against schemas.
 - [x] Speed metrics are real or clearly labeled sample.
 - [!] Production deployment works before submission.
@@ -1377,18 +1380,25 @@ npm run lint
 npm run typecheck
 npm run build
 npm test
+npm run verify:secrets
+npm run verify:ui
 ```
 
 If the project uses pnpm, replace `npm` with `pnpm`.
+`npm run verify:ui` requires a running local app, for example `npm run dev -- --hostname 127.0.0.1 --port 3000`.
 
 Verification note:
 
 - Added `npm run verify:local` for repeatable local quality checks.
 - Added `npm run verify:deployment` for repeatable deployment readiness checks.
+- Added `npm run verify:secrets` for tracked-file secret-pattern scanning.
+- Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
 - `npm test` passed with 4 tests.
 - `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
+- `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
+- `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
 - Quality gates are still blocked from full `[x]` because the configured Cerebras model returns provider `404 status code (no body)`, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 

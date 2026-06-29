@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "verify:local": "npm run typecheck && npm run lint && npm test && npm run build && npm audit --audit-level=moderate",
+    "verify:secrets": "node scripts/secret-scan.mjs",
+    "verify:ui": "node scripts/browser-smoke.mjs",
+    "verify:local": "npm run typecheck && npm run lint && npm test && npm run verify:secrets && npm run build && npm audit --audit-level=moderate",
     "verify:deployment": "node scripts/deployment-readiness.mjs"
   },
   "dependencies": {
