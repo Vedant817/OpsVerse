@@ -1221,8 +1221,8 @@ Only start these after the MVP is locally working and deployable.
 
 - [ ] Video upload to frame extraction.
 - [ ] GitHub PR diff analyzer.
-- [ ] Export Jira markdown.
-- [ ] Download incident report as PDF.
+- [x] Export Jira markdown.
+- [x] Download incident report as PDF.
 - [ ] Slack-style incident timeline.
 - [ ] Baseline comparison with Gemini.
 - [ ] RAG from synthetic runbook.
@@ -1232,6 +1232,13 @@ Acceptance criteria:
 
 - [ ] Stretch features must not break the primary demo flow.
 - [ ] Stretch features must not claim production integrations unless they are real.
+
+Verification note:
+
+- Added `src/lib/exports/incident-report.ts` to build Jira markdown, full incident markdown, and PDF bytes from the current validated `FinalIncidentPackage`.
+- Added a Jira tab markdown download button; the exported markdown is derived from completed agent outputs and explicitly says when agent-derived fields are pending.
+- Added a result-level PDF download button; the PDF includes summary, RCA, tests, Jira bug, release gate, speed metrics, and supplied evidence without inventing unavailable agent sections.
+- Added `tests/incident-report-export.test.ts` covering Jira markdown, incident markdown, PDF header/catalog/footer, and deterministic filename slug generation.
 
 ---
 

@@ -3,6 +3,7 @@
 import {
   ClipboardCopy,
   Database,
+  Download,
   FileJson,
   FileText,
   ShieldAlert,
@@ -12,6 +13,10 @@ import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { JiraOutput } from "@/components/jira-output";
 import { ReleaseGate } from "@/components/release-gate";
 import { SpeedMetrics } from "@/components/speed-metrics";
+import {
+  buildIncidentReportPdf,
+  incidentReportSlug,
+} from "@/lib/exports/incident-report";
 
 type ResultTabsProps = {
   result: FinalIncidentPackage;
@@ -32,6 +37,19 @@ type TabName = (typeof tabs)[number];
 
 function copyValue(value: string) {
   return navigator.clipboard.writeText(value);
+}
+
+function downloadBytesFile(fileName: string, content: Uint8Array, type: string) {
+  const bytes = content.buffer.slice(
+    content.byteOffset,
+    content.byteOffset + content.byteLength,
+  ) as ArrayBuffer;
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function CopyButton({
@@ -98,6 +116,7 @@ export function ResultTabs({ result }: ResultTabsProps) {
   const [activeTab, setActiveTab] = useState<TabName>("Summary");
   const [copiedLabel, setCopiedLabel] = useState("");
   const sqlChecks = result.outputs.db?.sql_checks ?? result.outputs.tests?.sql_validation ?? [];
+  const reportSlug = incidentReportSlug(result);
   const karateTest = result.outputs.tests?.karate_test ?? "";
   const releaseText = result.outputs.release
     ? `Release Gate: ${result.outputs.release.release_gate}\nRisk Score: ${result.outputs.release.risk_score}\nReason: ${result.outputs.release.reason}\nMust Fix:\n${result.outputs.release.must_fix_before_release.join("\n")}`
@@ -108,26 +127,46 @@ export function ResultTabs({ result }: ResultTabsProps) {
     window.setTimeout(() => setCopiedLabel(""), 1600);
   }
 
+  function downloadIncidentPdf() {
+    const pdfBytes = buildIncidentReportPdf(result);
+    downloadBytesFile(
+      `${reportSlug}.pdf`,
+      pdfBytes,
+      "application/pdf",
+    );
+    onCopied("Incident PDF");
+  }
+
   return (
     <section className="rounded border border-[#d6d1bf] bg-white">
       <div className="border-b border-[#e2decf] p-4">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Result tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab}
-              onClick={() => setActiveTab(tab)}
-              className={`h-10 rounded border px-3 text-sm font-semibold ${
-                activeTab === tab
-                  ? "border-[#116d6e] bg-[#e9f7f6] text-[#0d5d5f]"
-                  : "border-[#d6d1bf] bg-[#fbfaf5] text-[#4f4a40] hover:border-[#116d6e]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Result tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={`h-10 rounded border px-3 text-sm font-semibold ${
+                  activeTab === tab
+                    ? "border-[#116d6e] bg-[#e9f7f6] text-[#0d5d5f]"
+                    : "border-[#d6d1bf] bg-[#fbfaf5] text-[#4f4a40] hover:border-[#116d6e]"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={downloadIncidentPdf}
+            className="inline-flex h-10 items-center gap-2 rounded border border-[#d6d1bf] px-3 text-sm font-semibold hover:bg-[#f5f2e8]"
+          >
+            <Download size={16} aria-hidden="true" />
+            PDF
+          </button>
         </div>
         {copiedLabel ? (
           <p className="mt-3 text-sm font-semibold text-[#155e57]">
