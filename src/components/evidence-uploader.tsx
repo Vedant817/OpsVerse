@@ -100,6 +100,8 @@ type RuntimeStatus = {
     configured: boolean;
     model: string | null;
     model_available: boolean;
+    gemma_model: boolean;
+    generation_ready: boolean;
     available_models: string[];
     checked_at: string | null;
     base_url_origin: string | null;
@@ -1209,16 +1211,16 @@ function RuntimeStatusPanel({
         <div className="grid gap-3 text-xs">
           <RuntimeStatusRow
             label="Cerebras"
-            configured={
-              status.cerebras.configured && status.cerebras.model_available
-            }
+            configured={status.cerebras.generation_ready}
             detail={
-              status.cerebras.configured && status.cerebras.model_available
-                ? `${status.cerebras.model ?? "model configured"} available`
+              status.cerebras.generation_ready
+                ? `${status.cerebras.model ?? "Gemma model"} available`
                 : status.cerebras.configured
-                  ? `${status.cerebras.model ?? "configured model"} unavailable; available: ${
-                      status.cerebras.available_models.join(", ") || "none returned"
-                    }`
+                  ? status.cerebras.gemma_model
+                    ? `${status.cerebras.model ?? "configured Gemma model"} unavailable; available: ${
+                        status.cerebras.available_models.join(", ") || "none returned"
+                      }`
+                    : `${status.cerebras.model ?? "configured model"} is not Gemma`
                   : `Missing ${
                       status.cerebras.missing.join(", ") || "configuration"
                     }`

@@ -12,7 +12,7 @@ The runtime path uses Next.js API routes, structured schemas, server-side Cerebr
 - Secondary: Track 3, Enterprise Impact.
 - Optional: Track 2, People's Choice, only after a verified demo video exists.
 
-The project is built for Gemma 4 31B on Cerebras. The current `.env.example` uses `CEREBRAS_MODEL=gemma-4-31b`; the runtime status route probes the provider model list and reports when that configured model is unavailable for the current API key before any swarm output is claimed.
+The project is built for Gemma 4 31B on Cerebras. The current `.env.example` uses `CEREBRAS_MODEL=gemma-4-31b`; the runtime status route probes the provider model list and reports when that configured model is unavailable for the current API key before any swarm output is claimed. Non-Gemma Cerebras models are rejected instead of being used as silent fallbacks.
 
 ## What Works Now
 
@@ -207,7 +207,7 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 
 ## Current Known Blockers
 
-- The current local Cerebras key lists `gpt-oss-120b` and `zai-glm-4.7`; it does not list `gemma-4-31b`, so `/api/benchmark` returns HTTP `424` and the app keeps Gemma-dependent agents failed instead of falling back to a non-Gemma model. Do not claim live Gemma 4 success until a real Gemma provider call succeeds.
+- The current local Cerebras key lists `gpt-oss-120b` and `zai-glm-4.7`; it does not list `gemma-4-31b`, so `/api/benchmark` returns HTTP `424` and the app keeps Gemma-dependent agents failed instead of falling back to a non-Gemma model. Configuring one of those non-Gemma models is also rejected by policy. Do not claim live Gemma 4 success until a real Gemma provider call succeeds.
 - Supabase persistence is implemented but live insert/select refresh is not verified until valid Supabase environment variables are configured.
 - Deployment, demo video, live app link, and submission links are intentionally absent until verified.
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { isEnvConfigError } from "@/lib/env";
 import {
+  CerebrasNonGemmaModelError,
   CerebrasModelUnavailableError,
   runGemmaAgent,
 } from "@/lib/cerebras/client";
@@ -106,6 +107,18 @@ async function runBenchmark(prompt?: unknown) {
     }
 
     if (error instanceof CerebrasModelUnavailableError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          configuredModel: error.configuredModel,
+          availableModels: error.availableModels,
+        },
+        { status: 424 },
+      );
+    }
+
+    if (error instanceof CerebrasNonGemmaModelError) {
       return NextResponse.json(
         {
           ok: false,

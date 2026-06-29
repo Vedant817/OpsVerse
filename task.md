@@ -533,6 +533,7 @@ Verification note:
   - `model: process.env.CEREBRAS_MODEL || "gemma-4-31b"`
 - [x] Implement `runGemmaAgent`.
 - [x] Probe Cerebras model availability before live generation.
+- [x] Reject non-Gemma Cerebras models instead of silently falling back.
 - [x] Measure:
   - start time
   - latency ms
@@ -558,7 +559,9 @@ Verification note:
 - The route returns real latency, usage, tokens/sec, `time_info`, model, content, and response id when live Cerebras is configured.
 - Live Gemma call is blocked in this environment because `/models` lists `gpt-oss-120b` and `zai-glm-4.7`, but not the configured `gemma-4-31b`.
 - Added a cached provider model-list preflight in `src/lib/cerebras/client.ts`. If `CEREBRAS_MODEL` is unavailable, agent calls fail with a typed `CerebrasModelUnavailableError` before attempting chat completion.
+- Added `src/lib/cerebras/model-policy.ts`; if `CEREBRAS_MODEL` is not Gemma-family, agent calls fail with `CerebrasNonGemmaModelError` instead of running a non-Gemma fallback.
 - HTTP smoke verified `/api/benchmark` returns HTTP `424` with `configuredModel: "gemma-4-31b"` and available model IDs instead of a generic provider failure.
+- HTTP smoke verified `/api/runtime/status` reports `gemma_model: true` and `generation_ready: false` for the current unavailable `gemma-4-31b` configuration.
 - HTTP smoke verified `/api/agents/run` returns HTTP `502` with failed model-dependent agent runs carrying the model-unavailable message and no fake RCA/test/release output.
 - Missing-key and invalid-JSON paths were verified with `curl`.
 - `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
@@ -1022,6 +1025,7 @@ Verification note:
 - [x] Implement `app/api/runtime/status/route.ts`.
 - [x] Report Cerebras configuration without exposing `CEREBRAS_API_KEY`.
 - [x] Report configured Cerebras model availability from the provider model list.
+- [x] Report whether the configured model satisfies the Gemma-only policy.
 - [x] Report Supabase persistence configuration without exposing `SUPABASE_SERVICE_ROLE_KEY`.
 - [x] Report the public app URL used by the current runtime.
 - [x] Keep the route no-store so status is not cached.
@@ -1416,7 +1420,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` passed with 9 tests.
+- `npm test` passed with 11 tests.
 - `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.

@@ -6,6 +6,7 @@ import type {
   ChatCompletionMessageParam,
 } from "openai/resources/chat/completions";
 import { getCerebrasEnv } from "@/lib/env";
+import { gemmaModelPolicyMessage, isGemmaModel } from "@/lib/cerebras/model-policy";
 
 export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
@@ -33,6 +34,8 @@ export type GemmaAgentResult = {
 export type CerebrasModelReadiness = {
   configuredModel: string;
   available: boolean;
+  gemmaModel: boolean;
+  ready: boolean;
   availableModels: string[];
   checkedAt: string;
 };
@@ -48,6 +51,18 @@ export class CerebrasModelUnavailableError extends Error {
       }. Set CEREBRAS_MODEL to an available Gemma 4 model before claiming live Gemma execution.`,
     );
     this.name = "CerebrasModelUnavailableError";
+    this.configuredModel = configuredModel;
+    this.availableModels = availableModels;
+  }
+}
+
+export class CerebrasNonGemmaModelError extends Error {
+  readonly configuredModel: string;
+  readonly availableModels: string[];
+
+  constructor(configuredModel: string, availableModels: string[]) {
+    super(gemmaModelPolicyMessage(configuredModel));
+    this.name = "CerebrasNonGemmaModelError";
     this.configuredModel = configuredModel;
     this.availableModels = availableModels;
   }
@@ -150,10 +165,14 @@ async function fetchCerebrasModelIds() {
 export async function checkCerebrasModelReadiness(): Promise<CerebrasModelReadiness> {
   const env = getCerebrasEnv();
   const availableModels = await fetchCerebrasModelIds();
+  const available = availableModels.includes(env.CEREBRAS_MODEL);
+  const gemmaModel = isGemmaModel(env.CEREBRAS_MODEL);
 
   return {
     configuredModel: env.CEREBRAS_MODEL,
-    available: availableModels.includes(env.CEREBRAS_MODEL),
+    available,
+    gemmaModel,
+    ready: available && gemmaModel,
     availableModels,
     checkedAt: new Date().toISOString(),
   };
@@ -161,6 +180,13 @@ export async function checkCerebrasModelReadiness(): Promise<CerebrasModelReadin
 
 export async function assertCerebrasModelAvailable() {
   const readiness = await checkCerebrasModelReadiness();
+
+  if (!readiness.gemmaModel) {
+    throw new CerebrasNonGemmaModelError(
+      readiness.configuredModel,
+      readiness.availableModels,
+    );
+  }
 
   if (!readiness.available) {
     throw new CerebrasModelUnavailableError(

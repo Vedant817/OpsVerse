@@ -33,12 +33,16 @@ async function cerebrasStatus() {
       configured: true,
       model: env.CEREBRAS_MODEL,
       model_available: readiness.available,
+      gemma_model: readiness.gemmaModel,
+      generation_ready: readiness.ready,
       available_models: readiness.availableModels,
       checked_at: readiness.checkedAt,
       base_url_origin: safeOrigin(env.CEREBRAS_BASE_URL),
       missing: [] as string[],
-      note: readiness.available
-        ? "Configuration is present and the configured model is available. Use /api/benchmark for a live generation probe before claiming full model success."
+      note: readiness.ready
+        ? "Configuration is present and the configured Gemma model is available. Use /api/benchmark for a live generation probe before claiming full model success."
+        : !readiness.gemmaModel
+          ? "Configuration is present, but the configured model is not a Gemma model. OpsVerse requires Gemma 4 on Cerebras for live AI execution."
         : `Configuration is present, but the configured model is not available for this API key. Available models: ${
             readiness.availableModels.length > 0
               ? readiness.availableModels.join(", ")
@@ -51,6 +55,8 @@ async function cerebrasStatus() {
         configured: false,
         model: process.env.CEREBRAS_MODEL?.trim() || null,
         model_available: false,
+        gemma_model: false,
+        generation_ready: false,
         available_models: [] as string[],
         checked_at: null,
         base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
@@ -63,6 +69,8 @@ async function cerebrasStatus() {
       configured: true,
       model: process.env.CEREBRAS_MODEL?.trim() || null,
       model_available: false,
+      gemma_model: false,
+      generation_ready: false,
       available_models: [] as string[],
       checked_at: null,
       base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
