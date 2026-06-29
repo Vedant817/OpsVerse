@@ -66,6 +66,15 @@ type SwarmStreamEvent =
       run: AgentRun;
     }
   | {
+      type: "metrics_updated";
+      agent_name: string;
+      metrics: NonNullable<AgentRun["metrics"]>;
+    }
+  | {
+      type: "heartbeat";
+      timestamp: string;
+    }
+  | {
       type: "swarm_completed";
       ok: boolean;
       error: string | null;
@@ -657,6 +666,17 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
             setStreamStatus(
               `${streamEvent.run.agent_name} ${streamEvent.run.status}.`,
             );
+          } else if (streamEvent.type === "metrics_updated") {
+            setStreamRuns((current) =>
+              current.map((run) =>
+                run.agent_name === streamEvent.agent_name
+                  ? { ...run, metrics: streamEvent.metrics }
+                  : run,
+              ),
+            );
+            setStreamStatus(`${streamEvent.agent_name} metrics updated.`);
+          } else if (streamEvent.type === "heartbeat") {
+            setStreamStatus(`Live stream active at ${streamEvent.timestamp}.`);
           } else if (streamEvent.type === "swarm_completed") {
             finalPayload = {
               ok: streamEvent.ok,

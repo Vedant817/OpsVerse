@@ -919,7 +919,7 @@ Verification note:
 
 - [x] Implement `app/api/agents/stream/route.ts` if streaming is used.
 - [x] Stream state transitions to the UI.
-- [~] Include:
+- [x] Include:
   - agent started
   - agent completed
   - agent failed
@@ -929,19 +929,22 @@ Verification note:
 
 Acceptance criteria:
 
-- [~] User sees progress while the swarm runs.
-- [~] Long-running calls do not appear frozen.
+- [x] User sees progress while the swarm runs.
+- [x] Long-running calls do not appear frozen.
 
 Verification note:
 
 - Added stream-aware orchestration through `runIncidentSwarmWithEvents`, preserving the existing JSON route behavior.
-- Added `POST /api/agents/stream`, which emits SSE events for `agent_started`, `agent_completed`, `swarm_completed`, and `swarm_error`.
+- Added `POST /api/agents/stream`, which emits SSE events for `agent_started`, `agent_completed`, `metrics_updated`, `heartbeat`, `swarm_completed`, and `swarm_error`.
 - The stream route uses the same validation, image checks, optional Supabase persistence, dependency gating, and final package schema as `/api/agents/run`.
 - The intake UI now posts to `/api/agents/stream`, reads the response body, updates active agent states from real SSE events, and renders the final package when `swarm_completed` arrives.
-- Agent metrics are included on `agent_completed` events when provider responses include metrics; there is no separate `metrics_updated` event yet.
+- Agent metrics are included on `agent_completed` events and emitted as separate `metrics_updated` events only when the run contains real metrics.
+- Added heartbeat events every 10 seconds while the stream is open so long-running responses keep the transport visibly alive without inventing agent progress.
 - If the stream transport is unavailable or returns a non-SSE response before any events arrive, the UI now calls the real `/api/agents/run` route, clears fake active-agent state, and renders the actual JSON route package without inventing progress events.
 - HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure now appears as a model-unavailable failed agent output.
 - Forced non-SSE browser smoke intercepted `/api/agents/stream`, verified the UI fell back to `/api/agents/run`, and rendered the real failed package with `Agent Execution`, `Log Agent`, nine recorded runs, and the model-unavailable diagnostic.
+- HTTP SSE smoke after the metrics/heartbeat slice returned `agent_started: 5`, `agent_completed: 9`, `metrics_updated: 1`, and `swarm_completed: 1` on the real provider-failure path.
+- `tests/stream-events.test.ts` verifies heartbeat SSE serialization and confirms `metrics_updated` is emitted only for agent runs that contain real metrics.
 
 ---
 
@@ -1405,7 +1408,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` passed with 6 tests.
+- `npm test` passed with 8 tests.
 - `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.

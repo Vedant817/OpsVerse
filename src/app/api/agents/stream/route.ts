@@ -22,6 +22,11 @@ import {
   isEnvConfigError,
   isSupabasePersistenceConfigured,
 } from "@/lib/env";
+import {
+  heartbeatStreamEvent,
+  metricsUpdatedStreamEvent,
+  serializeSse,
+} from "@/lib/stream/sse";
 
 export const runtime = "nodejs";
 
@@ -55,10 +60,6 @@ function isZodLikeError(error: unknown): error is {
     "issues" in error &&
     Array.isArray((error as { issues?: unknown }).issues)
   );
-}
-
-function sse(event: string, data: unknown) {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 async function persistFinalResult(
@@ -131,9 +132,22 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let closed = false;
       const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(sse(event, data)));
+        if (closed) {
+          return;
+        }
+        controller.enqueue(encoder.encode(serializeSse(event, data)));
       };
+      const heartbeatTimer = setInterval(() => {
+        if (!closed) {
+          controller.enqueue(
+            encoder.encode(
+              serializeSse("heartbeat", heartbeatStreamEvent()),
+            ),
+          );
+        }
+      }, 10_000);
 
       try {
         const existingIncidentRequest = existingIncidentRequestSchema.parse(body);
@@ -162,6 +176,12 @@ export async function POST(request: Request) {
           incidentId: persistence.incident_id,
           onEvent(event) {
             send(event.type, event);
+            if (event.type === "agent_completed") {
+              const metricsEvent = metricsUpdatedStreamEvent(event.run);
+              if (metricsEvent) {
+                send("metrics_updated", metricsEvent);
+              }
+            }
           },
         });
         const parsedResult = finalIncidentPackageSchema.parse(result);
@@ -207,6 +227,8 @@ export async function POST(request: Request) {
           });
         }
       } finally {
+        closed = true;
+        clearInterval(heartbeatTimer);
         controller.close();
       }
     },
