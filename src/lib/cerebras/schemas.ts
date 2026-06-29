@@ -137,6 +137,7 @@ export const finalIncidentPackageSchema = z.object({
     rca: rcaOutputSchema.nullable(),
     tests: regressionTestOutputSchema.nullable(),
     release: releaseRiskOutputSchema.nullable(),
+    narrator: demoNarratorOutputSchema.nullable(),
   }),
 });
 
@@ -149,5 +150,6 @@ export type DbOutput = z.infer<typeof dbOutputSchema>;
 export type RcaOutput = z.infer<typeof rcaOutputSchema>;
 export type RegressionTestOutput = z.infer<typeof regressionTestOutputSchema>;
 export type ReleaseRiskOutput = z.infer<typeof releaseRiskOutputSchema>;
+export type DemoNarratorOutput = z.infer<typeof demoNarratorOutputSchema>;
 export type AgentRun = z.infer<typeof agentRunSchema>;
 export type FinalIncidentPackage = z.infer<typeof finalIncidentPackageSchema>;

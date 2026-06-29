@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpsVerse
 
-## Getting Started
+Multimodal Incident Swarm for Enterprise Apps.
 
-First, run the development server:
+OpsVerse turns a bug screenshot or frame, logs, API responses, DB snapshots, and optional Git diffs into an incident package: RCA, reproduction steps, Jira-ready bug text, SQL checks, regression tests, release risk, and speed metrics. The runtime path uses Next.js API routes, structured schemas, server-side Cerebras calls, optional Supabase persistence, and visible per-agent failure states.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Hackathon Positioning
+
+- Primary: Track 1, Multiverse Agents.
+- Secondary: Track 3, Enterprise Impact.
+- Optional: Track 2, People's Choice, only after a verified demo video exists.
+
+The project is built for Gemma 4 31B on Cerebras. The current `.env.example` uses `CEREBRAS_MODEL=gemma-4-31b`; if the provider returns `404 status code (no body)`, check model availability and account access in the Cerebras model catalog before claiming live model success.
+
+## What Works Now
+
+- Load three synthetic incident samples.
+- Upload PNG, JPEG, or WebP screenshot/frame evidence up to 2MB.
+- Reject full video files clearly instead of pretending frame extraction exists.
+- Run a server-side incident swarm through `/api/agents/run`.
+- Execute deterministic Intake plus Vision, Log, API, DB, RCA, Test, Release, and Narrator agent stages.
+- Validate model output with Zod schemas and show failed-agent states when provider calls fail.
+- Render the agent graph, result tabs, Jira output, release gate, and speed metrics from route output.
+- Persist incidents/evidence/agent runs when Supabase is configured.
+- Show a clear dashboard configuration error when Supabase is not configured.
+
+No static RCA/Jira/test/release answer is pasted into the app as if it came from AI. Sample data is synthetic and only seeds the same runtime path used by manual evidence.
+
+## Architecture
+
+```text
+Evidence form
+  |
+  v
+/api/agents/run
+  |
+  v
+Intake Agent
+  |
+  v
+Vision + Log + API + DB agents
+  |
+  v
+RCA Agent
+  |
+  v
+Regression Test Agent
+  |
+  v
+Release Risk Agent
+  |
+  v
+Demo Narrator Agent
+  |
+  v
+Result tabs + optional Supabase dashboard
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Key files:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `src/components/evidence-uploader.tsx` - sample/manual evidence intake and upload handling.
+- `src/app/api/agents/run/route.ts` - main swarm route.
+- `src/lib/agents/orchestrator.ts` - dependency flow and failed-agent gating.
+- `src/lib/agents/*-agent.ts` - individual agents.
+- `src/lib/cerebras/client.ts` - lazy OpenAI-compatible Cerebras client.
+- `src/lib/cerebras/schemas.ts` - runtime input/output contracts.
+- `src/lib/db/queries.ts` - optional Supabase persistence.
+- `src/app/dashboard/[id]/page.tsx` - persisted dashboard route.
+- `supabase/schema.sql` - database schema.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local Setup
 
-## Learn More
+Install dependencies:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create local environment values:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cp .env.example .env.local
+```
 
-## Deploy on Vercel
+Edit `.env.local`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+CEREBRAS_API_KEY=your-server-side-key
+CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
+CEREBRAS_MODEL=gemma-4-31b
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+BASELINE_PROVIDER_ENABLED=false
+GEMINI_API_KEY=
+```
+
+Start the app:
+
+```bash
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+Open `http://127.0.0.1:3000`.
+
+## Verification Commands
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm audit --audit-level=moderate
+```
+
+Useful API smoke checks:
+
+```bash
+curl -s -i -X POST http://127.0.0.1:3000/api/agents/run \
+  -H 'Content-Type: application/json' \
+  --data '{"title":"x"}'
+```
+
+The invalid payload should return HTTP `400` with field-level issues.
+
+## Supabase
+
+Apply `supabase/schema.sql` to a Supabase project, then set:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+`SUPABASE_SERVICE_ROLE_KEY` is used only from server-only modules. If Supabase is missing, incident creation returns HTTP `503` and the dashboard shows a visible configuration error instead of pretending persistence worked.
+
+## Demo Flow
+
+1. Click `Run Demo Incident`.
+2. Optionally upload a PNG/JPEG/WebP screenshot or representative frame.
+3. Click `Run Incident Swarm`.
+4. Watch the agent graph update from real route output.
+5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, and Speed Metrics tabs.
+
+If the Cerebras model call fails, the UI displays failed agents and provider errors. That is expected until the configured model is available for the account.
+
+## Security Notes
+
+- Do not commit `.env.local`.
+- Do not put real customer screenshots, logs, API payloads, DB rows, or private incidents into the repo.
+- `CEREBRAS_API_KEY` never goes to the browser bundle.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only.
+- Speed metrics are shown only from completed provider responses.
+- Demo/mock output must be explicitly labeled if added later.
+
+## Current Known Blockers
+
+- `gemma-4-31b` currently returns provider `404 status code (no body)` in local testing. The app handles this correctly with failed-agent states. Do not claim live Gemma 4 success until a real provider call succeeds.
+- Supabase persistence is implemented but live insert/select refresh is not verified until valid Supabase environment variables are configured.
+- Deployment, demo video, live app link, and submission links are intentionally absent until verified.
+
+## Future Scope
+
+- Real frame extraction from videos.
+- GitHub PR diff analyzer.
+- PDF incident report export.
+- Slack-style incident timeline.
+- Optional baseline comparison with Gemini when explicitly configured.
+- Follow-up chat over the incident evidence.

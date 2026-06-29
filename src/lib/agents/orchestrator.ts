@@ -12,6 +12,7 @@ import { runApiAgent } from "./api-agent";
 import { runDbAgent } from "./db-agent";
 import { runIntakeAgent } from "./intake-agent";
 import { runLogAgent } from "./log-agent";
+import { runNarratorAgent } from "./narrator-agent";
 import { runRcaAgent } from "./rca-agent";
 import { runReleaseAgent } from "./release-agent";
 import { runTestAgent } from "./test-agent";
@@ -77,6 +78,10 @@ export async function runIncidentSwarm(
         "release_agent",
         "Release risk skipped because RCA and tests did not complete.",
       ),
+      dependencyFailure(
+        "narrator_agent",
+        "Demo narration skipped because the incident package did not complete.",
+      ),
     );
 
     return finalIncidentPackageSchema.parse({
@@ -91,6 +96,7 @@ export async function runIncidentSwarm(
         rca: null,
         tests: null,
         release: null,
+        narrator: null,
       },
     });
   }
@@ -114,6 +120,10 @@ export async function runIncidentSwarm(
         "release_agent",
         "Release risk skipped because RCA and tests did not complete.",
       ),
+      dependencyFailure(
+        "narrator_agent",
+        "Demo narration skipped because the incident package did not complete.",
+      ),
     );
 
     return finalIncidentPackageSchema.parse({
@@ -128,6 +138,7 @@ export async function runIncidentSwarm(
         rca: null,
         tests: null,
         release: null,
+        narrator: null,
       },
     });
   }
@@ -146,6 +157,10 @@ export async function runIncidentSwarm(
         "release_agent",
         "Release risk skipped because regression tests did not complete.",
       ),
+      dependencyFailure(
+        "narrator_agent",
+        "Demo narration skipped because release risk did not complete.",
+      ),
     );
 
     return finalIncidentPackageSchema.parse({
@@ -160,6 +175,7 @@ export async function runIncidentSwarm(
         rca: rca.output,
         tests: null,
         release: null,
+        narrator: null,
       },
     });
   }
@@ -170,6 +186,39 @@ export async function runIncidentSwarm(
     tests: tests.output,
   });
   agentRuns.push(release.run);
+
+  if (!release.ok) {
+    agentRuns.push(
+      dependencyFailure(
+        "narrator_agent",
+        "Demo narration skipped because release risk did not complete.",
+      ),
+    );
+
+    return finalIncidentPackageSchema.parse({
+      incident,
+      agent_runs: agentRuns,
+      outputs: {
+        intake: intake.output,
+        vision: vision.output,
+        logs: logs.output,
+        api: api.output,
+        db: db.output,
+        rca: rca.output,
+        tests: tests.output,
+        release: null,
+        narrator: null,
+      },
+    });
+  }
+
+  const narrator = await runNarratorAgent({
+    incident,
+    rca: rca.output,
+    tests: tests.output,
+    release: release.output,
+  });
+  agentRuns.push(narrator.run);
 
   return finalIncidentPackageSchema.parse({
     incident,
@@ -183,6 +232,7 @@ export async function runIncidentSwarm(
       rca: rca.output,
       tests: tests.output,
       release: release.output,
+      narrator: narrator.output,
     },
   });
 }

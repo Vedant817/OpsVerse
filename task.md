@@ -812,21 +812,29 @@ Verification note:
 
 ### 9.9 Demo Narrator Agent
 
-- [ ] Implement `lib/agents/narrator-agent.ts`.
-- [ ] Generate:
+- [x] Implement `lib/agents/narrator-agent.ts`.
+- [~] Generate:
   - 60-second demo script
   - Discord Track 1 post
   - Discord Track 3 post
   - X/Twitter post
-- [ ] Keep generated posts aligned with actual implemented features.
-- [ ] Do not claim live URL, GitHub URL, or demo video until they exist.
+- [x] Keep generated posts aligned with actual implemented features.
+- [x] Do not claim live URL, GitHub URL, or demo video until they exist.
 
 Expected output fields:
 
-- [ ] `demo_script`
-- [ ] `discord_track_1_post`
-- [ ] `discord_track_3_post`
-- [ ] `x_post`
+- [x] `demo_script`
+- [x] `discord_track_1_post`
+- [x] `discord_track_3_post`
+- [x] `x_post`
+
+Verification note:
+
+- Added `src/lib/agents/narrator-agent.ts` and the narrator prompt in `src/lib/cerebras/prompts.ts`.
+- The narrator runs last, after RCA, Regression Test, and Release Risk complete, and validates output with `demoNarratorOutputSchema`.
+- If upstream agents fail, the orchestrator records a skipped `narrator_agent` run instead of producing fake submission copy.
+- Live narrator generation remains blocked until the configured Cerebras model returns successful responses.
+- HTTP smoke verified `/api/agents/run` returns nine agent runs, including `narrator_agent`, and reports `Demo narration skipped because the incident package did not complete` on the current provider failure path.
 
 ---
 
@@ -842,7 +850,7 @@ Expected output fields:
   - DB Agent
 - [~] Run RCA Agent after the first parallel group completes.
 - [~] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
-- [ ] Run Demo Narrator Agent last.
+- [x] Run Demo Narrator Agent last.
 - [~] Persist each agent state and output.
 - [x] Capture partial outputs if one agent fails.
 - [x] Return structured final incident package.
@@ -862,7 +870,7 @@ Vision + Logs + API + DB
 
 Acceptance criteria:
 
-- [~] Agents run in the intended dependency order.
+- [x] Agents run in the intended dependency order.
 - [x] Independent agents use `Promise.all` or equivalent parallel execution.
 - [x] UI can display per-agent progress.
 - [x] A single failed non-critical agent does not blank the whole dashboard.
@@ -1095,7 +1103,7 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [x] 18. Speed metrics from Cerebras responses.
 - [~] 19. Supabase schema and persistence.
 - [~] 20. Dashboard refresh loads persisted incident.
-- [ ] 21. README complete.
+- [x] 21. README complete.
 - [ ] 22. Vercel deployment.
 - [ ] 23. 60-second demo recording.
 - [ ] 24. Submission posts finalized.
@@ -1139,8 +1147,8 @@ Acceptance criteria:
 
 ## 16. README Requirements
 
-- [ ] Add `README.md`.
-- [ ] Include:
+- [x] Add `README.md`.
+- [x] Include:
   - Problem
   - Why Gemma 4 on Cerebras
   - Hackathon tracks
@@ -1153,14 +1161,20 @@ Acceptance criteria:
   - Environment variables
   - Security notes
   - Future scope
-- [ ] Include screenshots only after they exist.
-- [ ] Include live app link only after deployment works.
-- [ ] Include demo video link only after recording is uploaded.
+- [x] Include screenshots only after they exist.
+- [x] Include live app link only after deployment works.
+- [x] Include demo video link only after recording is uploaded.
 
 Acceptance criteria:
 
-- [ ] A new developer can run the app from README instructions.
-- [ ] Hackathon judges can understand the architecture and impact from README alone.
+- [x] A new developer can run the app from README instructions.
+- [x] Hackathon judges can understand the architecture and impact from README alone.
+
+Verification note:
+
+- Replaced the scaffold README with OpsVerse-specific setup, architecture, agent swarm, multimodal input, Supabase, demo flow, verification, security, blockers, and future-scope documentation.
+- README intentionally does not include screenshots, live app URL, GitHub URL, or demo video URL because those artifacts are not verified yet.
+- README states the current provider/model blocker instead of claiming live Gemma 4 success.
 
 ---
 

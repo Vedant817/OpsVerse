@@ -1,9 +1,12 @@
 import type {
   ApiOutput,
   DbOutput,
+  DemoNarratorOutput,
   IncidentEvidence,
   LogOutput,
   RcaOutput,
+  RegressionTestOutput,
+  ReleaseRiskOutput,
   VisionOutput,
 } from "@/lib/cerebras/schemas";
 
@@ -210,4 +213,49 @@ ${JSON.stringify(rca, null, 2)}
 
 Regression tests:
 ${JSON.stringify(tests, null, 2)}`;
+}
+
+export function buildDemoNarratorAgentPrompt({
+  incident,
+  rca,
+  tests,
+  release,
+}: {
+  incident: IncidentEvidence;
+  rca: RcaOutput;
+  tests: RegressionTestOutput;
+  release: ReleaseRiskOutput;
+}): string {
+  const outputShape: Record<keyof DemoNarratorOutput, string> = {
+    demo_script: "60-second script grounded only in implemented behavior",
+    discord_track_1_post: "Track 1 post explaining multimodal multi-agent flow",
+    discord_track_3_post: "Track 3 post explaining enterprise impact",
+    x_post: "Short post without fake links or unverified deployment claims",
+  };
+
+  return `${jsonOnly}
+
+You are the Demo Narrator Agent for OpsVerse.
+
+Generate submission-ready narrative artifacts that describe only the completed
+incident package below. Do not claim a live URL, GitHub URL, demo video, or
+successful production deployment unless that evidence is present in the input.
+Do not invent provider metrics. If speed metrics are missing, describe the
+metrics panel as displaying live metrics when successful provider responses are
+available.
+
+Return this exact JSON shape:
+${JSON.stringify(outputShape, null, 2)}
+
+Incident:
+${JSON.stringify(incident, null, 2)}
+
+RCA:
+${JSON.stringify(rca, null, 2)}
+
+Regression tests:
+${JSON.stringify(tests, null, 2)}
+
+Release decision:
+${JSON.stringify(release, null, 2)}`;
 }

@@ -3,6 +3,7 @@ import "server-only";
 import {
   apiOutputSchema,
   dbOutputSchema,
+  demoNarratorOutputSchema,
   finalIncidentPackageSchema,
   intakeOutputSchema,
   logOutputSchema,
@@ -90,6 +91,9 @@ export function dashboardRecordToFinalPackage(
   const release = releaseRiskOutputSchema.safeParse(
     outputForAgent(record, "release_agent"),
   );
+  const narrator = demoNarratorOutputSchema.safeParse(
+    outputForAgent(record, "narrator_agent"),
+  );
 
   return finalIncidentPackageSchema.parse({
     incident: incidentFromRecord(record),
@@ -103,6 +107,7 @@ export function dashboardRecordToFinalPackage(
       rca: rca.success ? rca.data : null,
       tests: tests.success ? tests.data : null,
       release: release.success ? release.data : null,
+      narrator: narrator.success ? narrator.data : null,
     },
   });
 }
