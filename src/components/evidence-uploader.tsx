@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  CheckCircle2,
   ClipboardCheck,
   Database,
   FileJson,
@@ -11,10 +12,11 @@ import {
   Loader2,
   Play,
   RotateCcw,
+  ServerCog,
   Sparkles,
   Video,
 } from "lucide-react";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AgentGraph } from "@/components/agent-graph";
 import { Hero } from "@/components/hero";
 import { ResultTabs } from "@/components/result-tabs";
@@ -76,6 +78,28 @@ type SwarmStreamEvent =
       missing?: string[];
       issues?: Array<{ path: string; message: string }>;
     };
+
+type RuntimeStatus = {
+  ok: boolean;
+  generated_at: string;
+  app: {
+    public_url: string | null;
+    node_env: string | null;
+  };
+  cerebras: {
+    configured: boolean;
+    model: string | null;
+    base_url_origin: string | null;
+    missing: string[];
+    note: string;
+  };
+  supabase: {
+    configured: boolean;
+    url_origin: string | null;
+    missing: string[];
+    note: string;
+  };
+};
 
 const emptyForm: EvidenceFormState = {
   title: "",
@@ -194,6 +218,12 @@ function parseSseBlock(block: string) {
   return JSON.parse(data) as SwarmStreamEvent;
 }
 
+function statusClass(configured: boolean) {
+  return configured
+    ? "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]"
+    : "border-[#f0b89d] bg-[#fff4ed] text-[#9a3412]";
+}
+
 export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [form, setForm] = useState<EvidenceFormState>(emptyForm);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
@@ -210,6 +240,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [streamRuns, setStreamRuns] = useState<AgentRun[]>([]);
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [streamStatus, setStreamStatus] = useState("");
+  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null);
+  const [runtimeStatusError, setRuntimeStatusError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const filledEvidenceCount = useMemo(
@@ -219,6 +251,39 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
 
   const selectedSample = samples.find((sample) => sample.id === selectedSampleId);
   const runPackage = runResult?.result ?? null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadRuntimeStatus() {
+      try {
+        const response = await fetch("/api/runtime/status", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as RuntimeStatus;
+
+        if (!response.ok) {
+          throw new Error("Runtime status request failed.");
+        }
+
+        setRuntimeStatus(payload);
+        setRuntimeStatusError("");
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRuntimeStatusError(
+          error instanceof Error ? error.message : "Runtime status unavailable.",
+        );
+      }
+    }
+
+    void loadRuntimeStatus();
+
+    return () => controller.abort();
+  }, []);
 
   function updateField(field: keyof EvidenceFormState, value: string) {
     setForm((current) => ({
@@ -519,6 +584,11 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
               </div>
             </dl>
           </div>
+
+          <RuntimeStatusPanel
+            status={runtimeStatus}
+            error={runtimeStatusError}
+          />
         </aside>
 
         <div className="space-y-6">
@@ -764,6 +834,91 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
         </div>
       </section>
     </main>
+  );
+}
+
+function RuntimeStatusPanel({
+  status,
+  error,
+}: {
+  status: RuntimeStatus | null;
+  error: string;
+}) {
+  return (
+    <div className="rounded border border-[#d6d1bf] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase text-[#555044]">
+          Runtime
+        </h2>
+        <ServerCog size={17} className="text-[#116d6e]" aria-hidden="true" />
+      </div>
+
+      {error ? (
+        <div className="rounded border border-[#f0b89d] bg-[#fff4ed] p-3 text-xs leading-5 text-[#9a3412]">
+          {error}
+        </div>
+      ) : null}
+
+      {!status && !error ? (
+        <div className="flex items-center gap-2 rounded border border-[#d6d1bf] bg-[#fbfaf5] p-3 text-xs text-[#625d52]">
+          <Loader2 className="animate-spin" size={15} aria-hidden="true" />
+          Checking runtime status
+        </div>
+      ) : null}
+
+      {status ? (
+        <div className="grid gap-3 text-xs">
+          <RuntimeStatusRow
+            label="Cerebras"
+            configured={status.cerebras.configured}
+            detail={
+              status.cerebras.configured
+                ? `${status.cerebras.model ?? "model configured"}; not probed`
+                : `Missing ${status.cerebras.missing.join(", ") || "configuration"}`
+            }
+          />
+          <RuntimeStatusRow
+            label="Supabase"
+            configured={status.supabase.configured}
+            detail={
+              status.supabase.configured
+                ? `${status.supabase.url_origin ?? "configured"}; not verified`
+                : `Missing ${status.supabase.missing.join(", ") || "configuration"}`
+            }
+          />
+          <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">
+            <p className="font-semibold text-[#555044]">App URL</p>
+            <p className="mt-1 truncate font-mono text-[#161616]">
+              {status.app.public_url ?? "not set"}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RuntimeStatusRow({
+  label,
+  configured,
+  detail,
+}: {
+  label: string;
+  configured: boolean;
+  detail: string;
+}) {
+  return (
+    <div className={`rounded border p-3 ${statusClass(configured)}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold">{label}</span>
+        {configured ? (
+          <CheckCircle2 size={15} aria-hidden="true" />
+        ) : (
+          <AlertTriangle size={15} aria-hidden="true" />
+        )}
+      </div>
+      <p className="mt-1 truncate font-mono">{detail}</p>
+    </div>
   );
 }
 

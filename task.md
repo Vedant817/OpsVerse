@@ -156,10 +156,12 @@ Acceptance criteria:
 Verification note:
 
 - Added server-only env validation in `src/lib/env.ts`.
+- Added `GET /api/runtime/status` and a sidebar Runtime panel that show Cerebras configuration, Supabase persistence configuration, and public app URL readiness without returning secret values.
 - `GET /api/benchmark` with no `CEREBRAS_API_KEY` returns HTTP 503 and JSON: `{"ok":false,"error":"Cerebras is not configured...","missing":["CEREBRAS_API_KEY"]}`.
 - `rg "CEREBRAS_API_KEY|CEREBRAS_BASE_URL|CEREBRAS_MODEL|SUPABASE_SERVICE_ROLE_KEY" .next/static` returned no matches, confirming the client static bundle does not reference server secret names.
 - Supabase service-role handling is server-only through `src/lib/db/supabase.ts`, which imports `server-only`, lazy-loads the admin client, and reads `SUPABASE_SERVICE_ROLE_KEY` only on the server.
 - `.env.example` was checked and contains placeholders only. A real key was moved to ignored `.env.local`; rotate that key before relying on it because it had been placed in `.env.example` during local work.
+- HTTP smoke verified `/api/runtime/status` reports `gemma-4-31b`, Cerebras base URL origin, missing Supabase env names, and `NEXT_PUBLIC_APP_URL` while omitting actual `CEREBRAS_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` values.
 
 ---
 
@@ -979,6 +981,28 @@ Verification note:
 - Added `src/app/api/benchmark/route.ts` in an earlier slice with real Cerebras latency, usage, and token-throughput reporting.
 - Missing Cerebras configuration returns HTTP 503, and provider failures return explicit errors instead of sample metrics.
 - Added a Speed Metrics result tab that renders real metrics from completed agent calls and shows an explicit empty state when provider calls fail.
+
+### 11.4 Runtime Status Route
+
+- [x] Implement `app/api/runtime/status/route.ts`.
+- [x] Report Cerebras configuration without exposing `CEREBRAS_API_KEY`.
+- [x] Report Supabase persistence configuration without exposing `SUPABASE_SERVICE_ROLE_KEY`.
+- [x] Report the public app URL used by the current runtime.
+- [x] Keep the route no-store so status is not cached.
+
+Acceptance criteria:
+
+- [x] Users can see whether runtime dependencies are configured before running the swarm.
+- [x] Missing external services are visible without pretending the run will complete.
+- [x] No secret values appear in the status response.
+
+Verification note:
+
+- Added `GET /api/runtime/status`.
+- Added a Runtime panel in `src/components/evidence-uploader.tsx` that fetches the status route and displays Cerebras, Supabase, and app URL readiness.
+- The panel labels configured services as not probed/not verified so configuration is not confused with live provider or database success.
+- HTTP smoke verified `/api/runtime/status` returned Cerebras configured for `gemma-4-31b`, Supabase missing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and `NEXT_PUBLIC_APP_URL=http://localhost:3000`.
+- The response includes missing env variable names but does not include actual API key or service-role values.
 
 ---
 
