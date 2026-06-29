@@ -311,6 +311,13 @@ function parseSseBlock(block: string) {
   return JSON.parse(data) as SwarmStreamEvent;
 }
 
+function isEventStream(response: Response) {
+  return response.headers
+    .get("content-type")
+    ?.toLowerCase()
+    .includes("text/event-stream");
+}
+
 function statusClass(configured: boolean) {
   return configured
     ? "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]"
@@ -547,6 +554,43 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
 
     setSubmitState("running");
     setStreamStatus("Opening live swarm stream.");
+    let sawStreamEvent = false;
+
+    async function runJsonFallback(reason: string) {
+      setStreamStatus(`${reason} Running non-stream fallback.`);
+      setActiveAgents([]);
+      setStreamRuns([]);
+
+      const response = await fetch("/api/agents/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+      const payload = (await response.json()) as SwarmApiResponse;
+      const finalPayload: SwarmApiResponse = {
+        ok: payload.ok,
+        error: payload.error,
+        result: payload.result,
+        persistence: payload.persistence,
+      };
+
+      setRunResult(finalPayload);
+      setStreamRuns(payload.result?.agent_runs ?? []);
+      setStreamStatus("Non-stream fallback completed.");
+
+      if (!response.ok || !payload.ok) {
+        setRunError(
+          payload.error ??
+            "Incident swarm did not complete. Inspect agent runs for details.",
+        );
+        setSubmitState("failed");
+        return;
+      }
+
+      setSubmitState("complete");
+    }
 
     try {
       const response = await fetch("/api/agents/stream", {
@@ -557,12 +601,13 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
         body: JSON.stringify(form),
       });
 
-      if (!response.body) {
-        throw new Error("Incident swarm stream did not return a readable body.");
+      if (!response.body || !isEventStream(response)) {
+        await runJsonFallback("Live stream transport is unavailable.");
+        return;
       }
 
       if (!response.ok) {
-        const payload = (await response.json()) as Partial<SwarmApiResponse>;
+        const payload = (await response.json()) as SwarmApiResponse;
         const message = payload.error ?? "Incident swarm request failed.";
 
         setRunError(message);
@@ -594,6 +639,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
           if (!streamEvent) {
             continue;
           }
+
+          sawStreamEvent = true;
 
           if (streamEvent.type === "agent_started") {
             setActiveAgents((current) =>
@@ -646,11 +693,28 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
 
       setSubmitState("complete");
     } catch (error) {
-      setRunError(
-        error instanceof Error
-          ? error.message
-          : "Incident swarm request failed.",
-      );
+      if (!sawStreamEvent) {
+        try {
+          await runJsonFallback(
+            error instanceof Error
+              ? `Live stream failed before events: ${error.message}`
+              : "Live stream failed before events.",
+          );
+          return;
+        } catch (fallbackError) {
+          setRunError(
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : "Incident swarm fallback request failed.",
+          );
+        }
+      } else {
+        setRunError(
+          error instanceof Error
+            ? error.message
+            : "Incident swarm request failed.",
+        );
+      }
       setActiveAgents([]);
       setSubmitState("failed");
     }

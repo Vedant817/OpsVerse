@@ -925,7 +925,7 @@ Verification note:
   - agent failed
   - metrics updated
   - final package completed
-- [x] Fall back to polling if streaming is not implemented in MVP.
+- [x] Fall back to the JSON swarm route if stream transport is unavailable.
 
 Acceptance criteria:
 
@@ -939,8 +939,9 @@ Verification note:
 - The stream route uses the same validation, image checks, optional Supabase persistence, dependency gating, and final package schema as `/api/agents/run`.
 - The intake UI now posts to `/api/agents/stream`, reads the response body, updates active agent states from real SSE events, and renders the final package when `swarm_completed` arrives.
 - Agent metrics are included on `agent_completed` events when provider responses include metrics; there is no separate `metrics_updated` event yet.
-- Polling fallback is not needed for the MVP because SSE is implemented as the primary progress path; if a target host cannot support streamed route responses, a polling route can be added later.
+- If the stream transport is unavailable or returns a non-SSE response before any events arrive, the UI now calls the real `/api/agents/run` route, clears fake active-agent state, and renders the actual JSON route package without inventing progress events.
 - HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure now appears as a model-unavailable failed agent output.
+- Forced non-SSE browser smoke intercepted `/api/agents/stream`, verified the UI fell back to `/api/agents/run`, and rendered the real failed package with `Agent Execution`, `Log Agent`, nine recorded runs, and the model-unavailable diagnostic.
 
 ---
 
