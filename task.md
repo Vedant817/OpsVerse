@@ -213,6 +213,7 @@ Verification note:
 - Added `supabase/schema.sql` with `incidents`, `incident_evidence`, `agent_runs`, `speed_benchmarks`, `demo_sessions`, and lookup indexes.
 - Schema is syntactically ready for Supabase/Postgres, but has not been applied against a live Supabase project in this environment.
 - Persistence behavior is implemented in server code and build-verified; live insert/select verification is blocked until valid Supabase env values are supplied.
+- `tests/dashboard-record.test.ts` verifies that saved Supabase-style rows reconstruct incident evidence, screenshot data, video frame arrays, completed agent outputs, failed agent rows, and metrics for dashboard refresh.
 
 ### 4.2 Database Client and Queries
 
@@ -228,16 +229,18 @@ Verification note:
 
 Acceptance criteria:
 
-- [ ] Dashboard URL can be refreshed without losing completed outputs when Supabase is configured.
+- [~] Dashboard URL can be refreshed without losing completed outputs when Supabase is configured.
 - [x] Database failures are visible in the UI/API response.
 
 Verification note:
 
 - Added lazy server-only Supabase admin client in `src/lib/db/supabase.ts`.
 - Added `src/lib/db/queries.ts` functions for incident creation, evidence saving, agent-run saving, full incident loading, incident evidence reconstruction, and speed benchmark saving.
+- Extracted dashboard record reconstruction into `src/lib/dashboard/record.ts` so the server dashboard page and tests use the same package-building path.
 - No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
 - `npm run typecheck` and `npm run lint` passed after the DB layer was added.
 - API smoke checks on `127.0.0.1:3000` confirmed invalid incident JSON returns HTTP 400, invalid evidence returns HTTP 400, and valid sample incident creation returns HTTP 503 with missing Supabase env fields when persistence is not configured.
+- `npm test` verifies saved row reconstruction preserves latest evidence rows, screenshot data URIs, frame arrays, completed outputs, failed runs, token metrics, and `time_info`; live Supabase insert/select refresh remains blocked until valid Supabase env values are configured.
 
 ---
 
@@ -452,6 +455,7 @@ Verification note:
 - The intake flow renders the same result tabs directly from the `/api/agents/run` response.
 - `/dashboard/[id]` loads persisted evidence and saved agent runs from Supabase when configured; when Supabase is missing it shows a visible dashboard error instead of fake stored output.
 - Refresh persistence is build-verified but not live-verified because valid Supabase env values are not configured in this environment.
+- `tests/dashboard-record.test.ts` verifies the same reconstruction used by `/dashboard/[id]` preserves persisted evidence, saved outputs, failed runs, metrics, and `time_info` after a simulated refresh.
 - HTTP smoke verified `/dashboard/00000000-0000-0000-0000-000000000000` renders `Dashboard unavailable` with the Supabase configuration error when persistence is not configured.
 
 ### 6.5 Speed Comparison Page
@@ -1412,7 +1416,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` passed with 8 tests.
+- `npm test` passed with 9 tests.
 - `npm run verify:local` passed after the test slice: typecheck, lint, tests, Next.js production build, and `npm audit --audit-level=moderate`.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
