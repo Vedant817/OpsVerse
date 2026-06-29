@@ -33,21 +33,31 @@ Verification rule: do not mark a task `[x]` unless the relevant code exists, the
 
 ### 1.1 Core Positioning
 
-- [ ] Implement OpsVerse as a multimodal incident-response control room for enterprise apps.
-- [ ] Make the first screen communicate the product clearly: "OpsVerse - Multimodal Incident Swarm for Enterprise Apps."
-- [ ] Preserve the one-line pitch in product copy, README, and demo script:
+- [x] Implement OpsVerse as a multimodal incident-response control room for enterprise apps.
+- [x] Make the first screen communicate the product clearly: "OpsVerse - Multimodal Incident Swarm for Enterprise Apps."
+- [~] Preserve the one-line pitch in product copy, README, and demo script:
   - OpsVerse turns a bug screenshot, screen recording frames, logs, API responses, DB snapshots, and Git diffs into a complete incident report, root-cause hypothesis, reproduction steps, regression tests, and release-risk decision using a swarm of Gemma 4 agents running on Cerebras.
-- [ ] Keep the hackathon positioning explicit:
+- [x] Keep the hackathon positioning explicit:
   - Primary: Track 1, Multiverse Agents.
   - Secondary: Track 3, Enterprise Impact.
   - Optional: Track 2, People's Choice, only after a strong demo video exists.
-- [ ] Keep all sample evidence synthetic. Do not use real company data.
+- [x] Keep all sample evidence synthetic. Do not use real company data.
 
 Acceptance criteria:
 
-- [ ] User can understand within 5 seconds that this is an enterprise incident triage product.
-- [ ] UI and README mention Gemma 4 on Cerebras.
-- [ ] Product output is engineering-actionable, not only a summary.
+- [x] User can understand within 5 seconds that this is an enterprise incident triage product.
+- [x] UI and README mention Gemma 4 on Cerebras.
+- [~] Product output is engineering-actionable, not only a summary.
+
+Verification note:
+
+- Added `src/components/hero.tsx` and wired it into the first viewport of the intake workflow.
+- The first viewport now renders the exact line `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`.
+- README now uses the required one-line pitch verbatim, and `src/components/hero.tsx` uses the same pitch in product copy.
+- README keeps the hackathon positioning explicit for Track 1, Track 3, and optional People's Choice.
+- The UI labels the workflow as `Synthetic evidence only`, and all bundled samples remain synthetic.
+- `curl -s http://127.0.0.1:3000` returned `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
+- Product output is still marked `[~]` because the output surface is actionable, but complete live RCA/test/release generation remains blocked by the configured provider/model returning `404 status code (no body)`.
 
 ---
 
@@ -322,8 +332,9 @@ Acceptance criteria:
 Verification note:
 
 - Replaced the default Next.js starter page with the OpsVerse intake workspace in `src/app/page.tsx`.
-- The product headline is present; the supporting hero copy was adjusted to avoid claiming the full swarm works before the orchestrator exists.
-- `curl -s http://127.0.0.1:3000` showed `OpsVerse`, `Run Demo Incident`, all three sample names, and `Incident Intake`.
+- The product headline is now rendered through `src/components/hero.tsx` with the exact first-viewport positioning line.
+- The hero copy intentionally uses the one-line product pitch and avoids over-claiming completed live RCA/test/release output while the configured provider/model still returns `404 status code (no body)`.
+- `curl -s http://127.0.0.1:3000` showed `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
 - Full browser click/responsive verification was not run because `agent-browser` and Playwright are not installed in this environment.
 
 ### 6.2 Incident Upload Page
@@ -470,7 +481,7 @@ Verification note:
 
 ### 7.1 Required Components
 
-- [ ] `components/hero.tsx`
+- [x] `components/hero.tsx`
 - [x] `components/evidence-uploader.tsx`
 - [x] `components/agent-graph.tsx`
 - [x] `components/agent-card.tsx`
@@ -496,6 +507,7 @@ Acceptance criteria:
 Verification note:
 
 - Components use typed props, semantic buttons/links, keyboard-focusable controls, and real incident package data.
+- Added `src/components/hero.tsx` with typed action callbacks, icon buttons, exact product positioning, Gemma 4/Cerebras labeling, and synthetic-evidence labeling.
 - Local Chrome smoke at 390px viewport verified no document-level horizontal overflow after rendering the failed swarm state, agent graph, and result tabs.
 
 ---

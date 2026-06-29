@@ -2,7 +2,9 @@
 
 Multimodal Incident Swarm for Enterprise Apps.
 
-OpsVerse turns a bug screenshot or frame, logs, API responses, DB snapshots, and optional Git diffs into an incident package: RCA, reproduction steps, Jira-ready bug text, SQL checks, regression tests, release risk, and speed metrics. The runtime path uses Next.js API routes, structured schemas, server-side Cerebras calls, optional Supabase persistence, and visible per-agent failure states.
+OpsVerse turns a bug screenshot, screen recording frames, logs, API responses, DB snapshots, and Git diffs into a complete incident report, root-cause hypothesis, reproduction steps, regression tests, and release-risk decision using a swarm of Gemma 4 agents running on Cerebras.
+
+The runtime path uses Next.js API routes, structured schemas, server-side Cerebras calls, optional Supabase persistence, and visible per-agent failure states.
 
 ## Hackathon Positioning
 

@@ -2,7 +2,6 @@
 
 import {
   AlertTriangle,
-  Boxes,
   ClipboardCheck,
   Database,
   FileJson,
@@ -10,16 +9,14 @@ import {
   GitBranch,
   ImagePlus,
   Loader2,
-  Network,
   Play,
   RotateCcw,
-  ShieldAlert,
   Sparkles,
-  Upload,
   Video,
 } from "lucide-react";
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { AgentGraph } from "@/components/agent-graph";
+import { Hero } from "@/components/hero";
 import { ResultTabs } from "@/components/result-tabs";
 import type { AgentRun, FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import type { IncidentSample } from "@/lib/samples";
@@ -464,79 +461,12 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
 
   return (
     <main className="min-h-screen bg-[#f7f7f2] text-[#161616]">
-      <section className="border-b border-[#d9d7c9] bg-[#111111] text-[#f7f7f2]">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-8 md:grid-cols-[minmax(0,1fr)_360px] md:px-8">
-          <div className="space-y-7">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-[#d8d6c8]">
-              <span className="inline-flex items-center gap-2 rounded border border-[#4c4b45] px-3 py-1">
-                <Network size={16} aria-hidden="true" />
-                Gemma 4 on Cerebras
-              </span>
-              <span className="inline-flex items-center gap-2 rounded border border-[#4c4b45] px-3 py-1">
-                <ShieldAlert size={16} aria-hidden="true" />
-                Synthetic evidence only
-              </span>
-            </div>
-
-            <div className="max-w-3xl space-y-4">
-              <h1 className="text-4xl font-semibold leading-tight md:text-6xl">
-                OpsVerse
-              </h1>
-              <p className="max-w-2xl text-xl leading-8 text-[#e5e2d5]">
-                Multimodal Incident Swarm for Enterprise Apps
-              </p>
-              <p className="max-w-3xl text-base leading-7 text-[#c9c6ba]">
-                Upload a screenshot, logs, API response, and DB snapshot. The
-                server runs the text-agent swarm through Cerebras and returns
-                structured RCA, test, and release-gate output.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => loadSample(samples[0])}
-                className="inline-flex h-11 items-center gap-2 rounded bg-[#f4c95d] px-4 text-sm font-semibold text-[#15120a] transition hover:bg-[#ffd86f]"
-              >
-                <Play size={17} aria-hidden="true" />
-                Run Demo Incident
-              </button>
-              <button
-                type="button"
-                onClick={focusForm}
-                className="inline-flex h-11 items-center gap-2 rounded border border-[#6b6a61] px-4 text-sm font-semibold text-[#f7f7f2] transition hover:bg-[#202020]"
-              >
-                <Upload size={17} aria-hidden="true" />
-                Upload Evidence
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowArchitecture((visible) => !visible)}
-                className="inline-flex h-11 items-center gap-2 rounded border border-[#6b6a61] px-4 text-sm font-semibold text-[#f7f7f2] transition hover:bg-[#202020]"
-              >
-                <Boxes size={17} aria-hidden="true" />
-                View Architecture
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-3 self-end">
-            {[
-              ["Multimodal RCA", "Screenshot, logs, API, DB, diff"],
-              ["Agent Swarm", "Vision, Log, API, DB, RCA, Test, Release"],
-              ["Release-Ready Output", "Jira, SQL, regression tests, gate"],
-            ].map(([title, detail]) => (
-              <div
-                key={title}
-                className="rounded border border-[#3d3c37] bg-[#1b1b1a] p-4"
-              >
-                <p className="text-sm font-semibold text-[#f7f7f2]">{title}</p>
-                <p className="mt-1 text-sm text-[#b9b6aa]">{detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Hero
+        architectureVisible={showArchitecture}
+        onRunDemo={() => loadSample(samples[0])}
+        onUploadEvidence={focusForm}
+        onToggleArchitecture={() => setShowArchitecture((visible) => !visible)}
+      />
 
       <section className="mx-auto grid max-w-7xl gap-6 px-5 py-6 md:grid-cols-[280px_minmax(0,1fr)] md:px-8">
         <aside className="space-y-4">
