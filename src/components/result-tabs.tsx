@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
+import { IncidentTimeline } from "@/components/incident-timeline";
 import { JiraOutput } from "@/components/jira-output";
 import { ReleaseGate } from "@/components/release-gate";
 import { SpeedMetrics } from "@/components/speed-metrics";
@@ -30,6 +31,7 @@ const tabs = [
   "Jira Bug",
   "Release Gate",
   "Speed Metrics",
+  "Timeline",
   "Submission",
 ] as const;
 
@@ -306,6 +308,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
 
         {activeTab === "Speed Metrics" ? (
           <SpeedMetrics agentRuns={result.agent_runs} />
+        ) : null}
+
+        {activeTab === "Timeline" ? (
+          <IncidentTimeline result={result} />
         ) : null}
 
         {activeTab === "Submission" ? (

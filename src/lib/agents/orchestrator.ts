@@ -17,6 +17,7 @@ import { runRcaAgent } from "./rca-agent";
 import { runReleaseAgent } from "./release-agent";
 import { runTestAgent } from "./test-agent";
 import { runVisionAgent } from "./vision-agent";
+import { hasVisualEvidence } from "@/lib/incident/visual-evidence";
 
 export type SwarmStreamEvent =
   | {
@@ -38,10 +39,6 @@ function dependencyFailure(agentName: string, message: string): AgentRun {
     error: message,
     metrics: null,
   };
-}
-
-function hasImageEvidence(incident: IncidentEvidence) {
-  return Boolean(incident.screenshotDataUri || incident.videoFrameDataUri);
 }
 
 async function emit(eventHandler: SwarmEventHandler | undefined, event: SwarmStreamEvent) {
@@ -145,7 +142,7 @@ export async function runIncidentSwarmWithEvents(
     db.run,
   ];
 
-  const requiredVisionFailed = hasImageEvidence(incident) && !vision.ok;
+  const requiredVisionFailed = hasVisualEvidence(incident) && !vision.ok;
 
   if (requiredVisionFailed || !logs.ok || !api.ok || !db.ok) {
     await emitDependencyFailure(

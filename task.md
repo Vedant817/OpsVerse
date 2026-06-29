@@ -1219,11 +1219,11 @@ Do not spend MVP time on these unless all MVP items are complete:
 
 Only start these after the MVP is locally working and deployable.
 
-- [ ] Video upload to frame extraction.
+- [x] Video upload to frame extraction.
 - [ ] GitHub PR diff analyzer.
 - [x] Export Jira markdown.
 - [x] Download incident report as PDF.
-- [ ] Slack-style incident timeline.
+- [x] Slack-style incident timeline.
 - [ ] Baseline comparison with Gemini.
 - [ ] RAG from synthetic runbook.
 - [ ] Ask follow-up chat over incident evidence.
@@ -1239,6 +1239,10 @@ Verification note:
 - Added a Jira tab markdown download button; the exported markdown is derived from completed agent outputs and explicitly says when agent-derived fields are pending.
 - Added a result-level PDF download button; the PDF includes summary, RCA, tests, Jira bug, release gate, speed metrics, and supplied evidence without inventing unavailable agent sections.
 - Added `tests/incident-report-export.test.ts` covering Jira markdown, incident markdown, PDF header/catalog/footer, and deterministic filename slug generation.
+- Video upload to frame extraction was already implemented in the intake UI and server evidence path; reconciled this stretch checklist with the verified §8.4 implementation.
+- Added `src/lib/timeline/incident-timeline.ts` and `src/components/incident-timeline.tsx` to render a Slack-style activity feed from supplied evidence, agent runs, and generated output availability.
+- Added `src/lib/incident/visual-evidence.ts` and updated the orchestrator so extracted `videoFrameDataUris` count as visual evidence when deciding whether failed Vision should gate RCA/Test/Release.
+- Added `tests/incident-timeline.test.ts` covering timeline reconstruction and the extracted-video-frame visual evidence predicate.
 
 ---
 
