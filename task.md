@@ -483,6 +483,10 @@ Verification note:
 - Speed metrics are calculated only from completed agent runs and stored model usage metrics. Failed provider calls show an explicit no-metrics state.
 - Updated `supabase/schema.sql` and DB queries to preserve `time_info` from agent runs when Supabase persistence is configured.
 - Browser smoke verified the Speed Metrics tab renders `Cerebras Speed Metrics` and the no-synthetic-metrics empty state after the current provider failure.
+- Added `src/lib/baseline/gemini.ts` and `src/lib/baseline/gemini-response.ts` for optional live Gemini baseline probes when `BASELINE_PROVIDER_ENABLED=true` and `GEMINI_API_KEY` are configured.
+- Added a user-triggered `Run Benchmark` control in Speed Metrics; it calls `/api/benchmark` and renders Cerebras/Gemini results, failures, disabled state, or missing config without synthetic metrics.
+- HTTP smoke verified `/api/runtime/status` reports Gemini baseline disabled with `model: "gemini-3.5-flash"` and no key leakage.
+- HTTP smoke verified `/api/benchmark` with `includeBaseline:true` still returns the real Cerebras model-unavailable error and a disabled Gemini baseline object instead of fake comparison data.
 
 ---
 
@@ -1019,6 +1023,9 @@ Verification note:
 - Added `src/app/api/benchmark/route.ts` in an earlier slice with real Cerebras latency, usage, and token-throughput reporting.
 - Missing Cerebras configuration returns HTTP 503, and provider failures return explicit errors instead of sample metrics.
 - Added a Speed Metrics result tab that renders real metrics from completed agent calls and shows an explicit empty state when provider calls fail.
+- `/api/benchmark` now accepts `includeBaseline=true` and returns a `baseline` object for Gemini only when requested or when baseline is enabled. Disabled and missing-key states are explicit.
+- Added `tests/gemini-baseline.test.ts` covering Gemini content and usage parsing without network calls.
+- HTTP smoke verified the baseline-disabled response path while the configured Cerebras model remains unavailable for the current key.
 
 ### 11.4 Runtime Status Route
 
@@ -1224,7 +1231,7 @@ Only start these after the MVP is locally working and deployable.
 - [x] Export Jira markdown.
 - [x] Download incident report as PDF.
 - [x] Slack-style incident timeline.
-- [ ] Baseline comparison with Gemini.
+- [x] Baseline comparison with Gemini.
 - [x] RAG from synthetic runbook.
 - [ ] Ask follow-up chat over incident evidence.
 
@@ -1249,6 +1256,9 @@ Verification note:
 - Added `src/lib/runbook/synthetic-runbook.ts` with checked-in synthetic runbook entries and deterministic retrieval over supplied incident evidence.
 - Added a `Runbook` result tab and included synthetic runbook matches in incident report exports; the UI states clearly that this is not a live vector database.
 - Added `tests/synthetic-runbook.test.ts` covering match ranking, no-match empty state, and exported report inclusion.
+- Added optional Gemini baseline comparison through `/api/benchmark`, runtime status, and the Speed Metrics tab. The baseline uses a real Gemini API request only when explicitly enabled and configured; otherwise it reports disabled or missing config.
+- Added `GEMINI_MODEL=gemini-3.5-flash` to `.env.example` and README setup docs.
+- `npm run verify:ui` passed after adding the benchmark control and runtime Gemini status row.
 
 ---
 

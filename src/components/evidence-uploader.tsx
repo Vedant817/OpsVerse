@@ -114,6 +114,14 @@ type RuntimeStatus = {
     missing: string[];
     note: string;
   };
+  baseline: {
+    enabled: boolean;
+    configured: boolean;
+    provider: "gemini";
+    model: string;
+    missing: string[];
+    note: string;
+  };
 };
 
 const emptyForm: EvidenceFormState = {
@@ -1233,6 +1241,17 @@ function RuntimeStatusPanel({
               status.supabase.configured
                 ? `${status.supabase.url_origin ?? "configured"}; not verified`
                 : `Missing ${status.supabase.missing.join(", ") || "configuration"}`
+            }
+          />
+          <RuntimeStatusRow
+            label="Gemini"
+            configured={!status.baseline.enabled || status.baseline.configured}
+            detail={
+              status.baseline.enabled
+                ? status.baseline.configured
+                  ? `${status.baseline.model} baseline ready`
+                  : `Missing ${status.baseline.missing.join(", ") || "configuration"}`
+                : "baseline disabled"
             }
           />
           <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">

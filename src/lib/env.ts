@@ -37,6 +37,16 @@ const supabaseEnvSchema = z.object({
 
 export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>;
 
+const geminiBaselineEnvSchema = z.object({
+  BASELINE_PROVIDER_ENABLED: z.string().trim().default("false"),
+  GEMINI_API_KEY: z.string().trim().optional().default(""),
+  GEMINI_MODEL: z.string().trim().min(1).default("gemini-3.5-flash"),
+});
+
+export type GeminiBaselineEnv = z.infer<typeof geminiBaselineEnvSchema> & {
+  enabled: boolean;
+};
+
 export function getCerebrasEnv(): CerebrasEnv {
   const parsed = cerebrasEnvSchema.safeParse({
     CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
@@ -54,6 +64,19 @@ export function getCerebrasEnv(): CerebrasEnv {
   }
 
   return parsed.data;
+}
+
+export function getGeminiBaselineEnv(): GeminiBaselineEnv {
+  const parsed = geminiBaselineEnvSchema.parse({
+    BASELINE_PROVIDER_ENABLED: process.env.BASELINE_PROVIDER_ENABLED,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL,
+  });
+
+  return {
+    ...parsed,
+    enabled: parsed.BASELINE_PROVIDER_ENABLED.toLowerCase() === "true",
+  };
 }
 
 export function isEnvConfigError(error: unknown): error is EnvConfigError {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkCerebrasModelReadiness } from "@/lib/cerebras/client";
 import {
   getCerebrasEnv,
+  getGeminiBaselineEnv,
   getSupabaseEnv,
   isEnvConfigError,
 } from "@/lib/env";
@@ -105,6 +106,43 @@ function supabaseStatus() {
   }
 }
 
+function baselineStatus() {
+  const env = getGeminiBaselineEnv();
+
+  if (!env.enabled) {
+    return {
+      enabled: false,
+      configured: false,
+      provider: "gemini",
+      model: env.GEMINI_MODEL,
+      missing: [] as string[],
+      note:
+        "Gemini baseline comparison is disabled. Set BASELINE_PROVIDER_ENABLED=true to run it from /api/benchmark.",
+    };
+  }
+
+  if (!env.GEMINI_API_KEY) {
+    return {
+      enabled: true,
+      configured: false,
+      provider: "gemini",
+      model: env.GEMINI_MODEL,
+      missing: ["GEMINI_API_KEY"],
+      note: "Gemini baseline comparison is enabled but GEMINI_API_KEY is missing.",
+    };
+  }
+
+  return {
+    enabled: true,
+    configured: true,
+    provider: "gemini",
+    model: env.GEMINI_MODEL,
+    missing: [] as string[],
+    note:
+      "Gemini baseline comparison is configured. Use /api/benchmark with includeBaseline=true to run a live baseline probe.",
+  };
+}
+
 export async function GET() {
   return NextResponse.json(
     {
@@ -115,6 +153,7 @@ export async function GET() {
         node_env: process.env.NODE_ENV ?? null,
       },
       cerebras: await cerebrasStatus(),
+      baseline: baselineStatus(),
       supabase: supabaseStatus(),
     },
     {

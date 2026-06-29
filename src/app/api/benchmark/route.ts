@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { isEnvConfigError } from "@/lib/env";
+import { getGeminiBaselineEnv, isEnvConfigError } from "@/lib/env";
 import {
   CerebrasNonGemmaModelError,
   CerebrasModelUnavailableError,
   runGemmaAgent,
 } from "@/lib/cerebras/client";
+import { runGeminiBaseline } from "@/lib/baseline/gemini";
 
 export const runtime = "nodejs";
 
 type BenchmarkRequestBody = {
   prompt?: unknown;
+  includeBaseline?: unknown;
 };
 
 const defaultBenchmarkPrompt =
@@ -43,8 +45,38 @@ function toErrorMessage(error: unknown) {
   return "Unexpected server error";
 }
 
-export async function GET() {
-  return runBenchmark();
+function shouldIncludeBaseline(value: unknown) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return ["1", "true", "yes"].includes(value.toLowerCase());
+  }
+
+  return getGeminiBaselineEnv().enabled;
+}
+
+async function baselineForPrompt(prompt: string, includeBaseline: boolean) {
+  if (!includeBaseline && !getGeminiBaselineEnv().enabled) {
+    return null;
+  }
+
+  return runGeminiBaseline(prompt);
+}
+
+function benchmarkPrompt(prompt: unknown) {
+  return typeof prompt === "string" && prompt.trim().length > 0
+    ? prompt.trim()
+    : defaultBenchmarkPrompt;
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  return runBenchmark({
+    prompt: url.searchParams.get("prompt") ?? undefined,
+    includeBaseline: shouldIncludeBaseline(url.searchParams.get("includeBaseline")),
+  });
 }
 
 export async function POST(request: Request) {
@@ -62,15 +94,27 @@ export async function POST(request: Request) {
     );
   }
 
-  return runBenchmark(body.prompt);
+  return runBenchmark({
+    prompt: body.prompt,
+    includeBaseline: shouldIncludeBaseline(body.includeBaseline),
+  });
 }
 
-async function runBenchmark(prompt?: unknown) {
+async function runBenchmark({
+  prompt,
+  includeBaseline,
+}: {
+  prompt?: unknown;
+  includeBaseline: boolean;
+}) {
+  const userPrompt = benchmarkPrompt(prompt);
+
   try {
     const result = await runGemmaAgent({
-      messages: buildBenchmarkMessages(prompt),
+      messages: buildBenchmarkMessages(userPrompt),
       reasoningEffort: "none",
     });
+    const baseline = await baselineForPrompt(userPrompt, includeBaseline);
 
     return NextResponse.json(
       {
@@ -87,6 +131,7 @@ async function runBenchmark(prompt?: unknown) {
           timeInfo: result.timeInfo,
         },
         responseId: result.responseId,
+        baseline,
       },
       {
         headers: {
@@ -96,45 +141,53 @@ async function runBenchmark(prompt?: unknown) {
     );
   } catch (error) {
     if (isEnvConfigError(error)) {
+      const baseline = await baselineForPrompt(userPrompt, includeBaseline);
       return NextResponse.json(
         {
           ok: false,
           error: error.message,
           missing: error.missing,
+          baseline,
         },
         { status: 503 },
       );
     }
 
     if (error instanceof CerebrasModelUnavailableError) {
+      const baseline = await baselineForPrompt(userPrompt, includeBaseline);
       return NextResponse.json(
         {
           ok: false,
           error: error.message,
           configuredModel: error.configuredModel,
           availableModels: error.availableModels,
+          baseline,
         },
         { status: 424 },
       );
     }
 
     if (error instanceof CerebrasNonGemmaModelError) {
+      const baseline = await baselineForPrompt(userPrompt, includeBaseline);
       return NextResponse.json(
         {
           ok: false,
           error: error.message,
           configuredModel: error.configuredModel,
           availableModels: error.availableModels,
+          baseline,
         },
         { status: 424 },
       );
     }
 
+    const baseline = await baselineForPrompt(userPrompt, includeBaseline);
     return NextResponse.json(
       {
         ok: false,
         error: "Cerebras benchmark request failed.",
         detail: toErrorMessage(error),
+        baseline,
       },
       { status: 502 },
     );

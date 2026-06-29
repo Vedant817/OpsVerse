@@ -101,6 +101,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 BASELINE_PROVIDER_ENABLED=false
 GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 Start the app:
@@ -192,7 +193,7 @@ Do not add a live URL to this README until the deployed app has been manually ve
 2. Optionally upload a PNG/JPEG/WebP screenshot or representative frame.
 3. Click `Run Incident Swarm`.
 4. Watch the agent graph update from real route output.
-5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, and Speed Metrics tabs.
+5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, Speed Metrics, Timeline, PR Diff, and Runbook tabs.
 
 If the Cerebras model call fails, the UI displays failed agents and provider errors. If the configured model is unavailable, `/api/runtime/status` reports the provider's available model IDs and `/api/benchmark` returns HTTP `424`.
 
@@ -202,7 +203,8 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 - Do not put real customer screenshots, logs, API payloads, DB rows, or private incidents into the repo.
 - `CEREBRAS_API_KEY` never goes to the browser bundle.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only.
-- Speed metrics are shown only from completed provider responses.
+- Speed metrics and provider benchmarks are shown only from completed provider responses.
+- Gemini baseline comparison is opt-in with `BASELINE_PROVIDER_ENABLED=true`, `GEMINI_API_KEY`, and `GEMINI_MODEL`.
 - Demo/mock output must be explicitly labeled if added later.
 
 ## Current Known Blockers
@@ -213,9 +215,6 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 
 ## Future Scope
 
-- Real frame extraction from videos.
-- GitHub PR diff analyzer.
-- PDF incident report export.
-- Slack-style incident timeline.
-- Optional baseline comparison with Gemini when explicitly configured.
 - Follow-up chat over the incident evidence.
+- Live production deployment and demo recording after provider and hosting credentials are configured.
+- Real Jira/GitHub integrations if the MVP needs authenticated external workflow writes later.
