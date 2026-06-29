@@ -244,69 +244,45 @@ export async function runIncidentSwarmWithEvents(
     });
   }
 
-  await emit(options.onEvent, {
-    type: "agent_started",
-    agent_name: "test_agent",
-  });
-  const tests = await runTestAgent({
-    incident,
-    rca: rca.output,
-    api: api.output,
-    db: db.output,
-  });
-  agentRuns.push(tests.run);
-  await emit(options.onEvent, {
-    type: "agent_completed",
-    run: tests.run,
-  });
+  await Promise.all(
+    ["test_agent", "release_agent"].map((agentName) =>
+      emit(options.onEvent, {
+        type: "agent_started",
+        agent_name: agentName,
+      }),
+    ),
+  );
 
-  if (!tests.ok) {
-    await emitDependencyFailure(
-      agentRuns,
-      options.onEvent,
-      "release_agent",
-      "Release risk skipped because regression tests did not complete.",
-    );
-    await emitDependencyFailure(
-      agentRuns,
-      options.onEvent,
-      "narrator_agent",
-      "Demo narration skipped because release risk did not complete.",
-    );
-
-    return finalIncidentPackageSchema.parse({
+  const [tests, release] = await Promise.all([
+    runTestAgent({
       incident,
-      agent_runs: agentRuns,
-      outputs: {
-        intake: intake.output,
-        vision: vision.output,
-        logs: logs.output,
-        api: api.output,
-        db: db.output,
-        rca: rca.output,
-        tests: null,
-        release: null,
-        narrator: null,
-      },
-    });
-  }
+      rca: rca.output,
+      api: api.output,
+      db: db.output,
+    }).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
+    runReleaseAgent({
+      incident,
+      rca: rca.output,
+      api: api.output,
+      db: db.output,
+    }).then(async (result) => {
+      await emit(options.onEvent, {
+        type: "agent_completed",
+        run: result.run,
+      });
+      return result;
+    }),
+  ]);
 
-  await emit(options.onEvent, {
-    type: "agent_started",
-    agent_name: "release_agent",
-  });
-  const release = await runReleaseAgent({
-    incident,
-    rca: rca.output,
-    tests: tests.output,
-  });
-  agentRuns.push(release.run);
-  await emit(options.onEvent, {
-    type: "agent_completed",
-    run: release.run,
-  });
+  agentRuns.push(tests.run, release.run);
 
-  if (!release.ok) {
+  if (!tests.ok || !release.ok) {
     await emitDependencyFailure(
       agentRuns,
       options.onEvent,
@@ -325,7 +301,7 @@ export async function runIncidentSwarmWithEvents(
         db: db.output,
         rca: rca.output,
         tests: tests.output,
-        release: null,
+        release: release.output,
         narrator: null,
       },
     });

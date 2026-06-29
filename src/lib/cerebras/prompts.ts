@@ -185,18 +185,22 @@ ${JSON.stringify(db, null, 2)}`;
 export function buildReleaseAgentPrompt({
   incident,
   rca,
-  tests,
+  api,
+  db,
 }: {
   incident: IncidentEvidence;
   rca: RcaOutput;
-  tests: unknown;
+  api: ApiOutput;
+  db: DbOutput;
 }) {
   return `${jsonOnly}
 
 You are the Release Risk Agent.
 
 Decide whether the release should PASS, WARN, or BLOCK. Consider business impact,
-affected flow, confidence, missing evidence, and available regression tests.
+affected flow, confidence, missing evidence, API contract risk, and DB consistency risk.
+Regression tests run in parallel; recommend the required test coverage instead of
+depending on generated test output.
 
 Return:
 - release_gate: PASS, WARN, or BLOCK
@@ -211,8 +215,11 @@ ${JSON.stringify(incident, null, 2)}
 RCA:
 ${JSON.stringify(rca, null, 2)}
 
-Regression tests:
-${JSON.stringify(tests, null, 2)}`;
+API analysis:
+${JSON.stringify(api, null, 2)}
+
+DB analysis:
+${JSON.stringify(db, null, 2)}`;
 }
 
 export function buildDemoNarratorAgentPrompt({

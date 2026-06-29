@@ -867,7 +867,7 @@ Verification note:
   - API Agent
   - DB Agent
 - [~] Run RCA Agent after the first parallel group completes.
-- [~] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
+- [x] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
 - [x] Run Demo Narrator Agent last.
 - [~] Persist each agent state and output.
 - [x] Capture partial outputs if one agent fails.
@@ -892,6 +892,14 @@ Acceptance criteria:
 - [x] Independent agents use `Promise.all` or equivalent parallel execution.
 - [x] UI can display per-agent progress.
 - [x] A single failed non-critical agent does not blank the whole dashboard.
+
+Verification note:
+
+- Updated the orchestrator so `test_agent` and `release_agent` both emit `agent_started` after RCA completes and then run inside one `Promise.all`.
+- Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
+- Narrator remains gated on both Regression Test and Release Risk completion.
+- `npm run typecheck` and `npm run lint` passed after the release-agent contract change.
+- HTTP SSE smoke on the current provider-failure path still returned 5 started events, 9 completed agent runs, and a final `swarm_completed` event. The post-RCA parallel branch cannot be live-exercised until the configured Cerebras model stops returning provider `404 status code (no body)`.
 
 ### 10.2 Streaming
 

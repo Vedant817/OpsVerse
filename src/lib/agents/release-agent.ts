@@ -3,24 +3,27 @@ import "server-only";
 import { buildReleaseAgentPrompt } from "@/lib/cerebras/prompts";
 import {
   releaseRiskOutputSchema,
+  type ApiOutput,
+  type DbOutput,
   type IncidentEvidence,
   type RcaOutput,
-  type RegressionTestOutput,
 } from "@/lib/cerebras/schemas";
 import { runStructuredAgent } from "./structured-agent";
 
 export async function runReleaseAgent({
   incident,
   rca,
-  tests,
+  api,
+  db,
 }: {
   incident: IncidentEvidence;
   rca: RcaOutput;
-  tests: RegressionTestOutput;
+  api: ApiOutput;
+  db: DbOutput;
 }) {
   return runStructuredAgent({
     agentName: "release_agent",
-    prompt: buildReleaseAgentPrompt({ incident, rca, tests }),
+    prompt: buildReleaseAgentPrompt({ incident, rca, api, db }),
     schema: releaseRiskOutputSchema,
   });
 }

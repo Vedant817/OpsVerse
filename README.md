@@ -49,12 +49,9 @@ Vision + Log + API + DB agents
 RCA Agent
   |
   v
-Regression Test Agent
-  |
-  v
-Release Risk Agent
-  |
-  v
+Regression Test Agent + Release Risk Agent
+  \  /
+   v
 Demo Narrator Agent
   |
   v
