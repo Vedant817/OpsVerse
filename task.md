@@ -1342,6 +1342,8 @@ Verification note:
 - Hardened `scripts/deployment-readiness.mjs` to include the documented `GEMINI_MODEL` baseline env key.
 - Hardened `scripts/secret-scan.mjs` to scan `.next/static` browser assets when a production build exists, and moved `verify:secrets` after `build` in `npm run verify:local`.
 - `npm run verify:deployment` currently passes repo-local personal git identity, Vercel config, package scripts, `.env.example` coverage, Supabase schema tables, ignore rules, and tracked secret hygiene; it fails as expected because no git remote is configured and GitHub/Vercel CLIs are not installed in this environment.
+- Added `tests/deployment-readiness.test.ts` to exercise the deployment preflight in temporary git repositories. It verifies a complete fixture with personal git identity, remote, fake GitHub/Vercel CLIs, env placeholders, schema, and ignore rules passes; it also verifies missing remote and missing required CLIs fail closed.
+- `npm test`, `npm run lint`, `npm run typecheck`, and `npm run verify:secrets` passed after adding deployment readiness tests.
 - Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the current Cerebras key does not list the configured `gemma-4-31b` model.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
@@ -1465,7 +1467,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` currently passes with 32 tests.
+- `npm test` currently passes with 34 tests.
 - `npm run verify:local` previously passed after the test slice. After the final-output contract slice it passed typecheck, lint, and tests, then Turbopack hit a sandbox-only port-binding panic during build; the same `npm run build` command passed outside the sandbox, and `npm run verify:secrets` plus `npm audit --audit-level=moderate` passed afterward.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
