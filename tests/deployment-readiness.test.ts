@@ -36,16 +36,22 @@ create table if not exists demo_sessions (id uuid primary key);
 function createRepoFixture({
   withRemote,
   withFakeCli,
+  gitEmail = "vedantmahajan271@gmail.com",
+  envExampleContent = envExample,
+  schemaSqlContent = schemaSql,
 }: {
   withRemote: boolean;
   withFakeCli: boolean;
+  gitEmail?: string;
+  envExampleContent?: string;
+  schemaSqlContent?: string;
 }) {
   const dir = mkdtempSync(join(tmpdir(), "opsverse-deploy-"));
   mkdirSync(join(dir, "supabase"));
-  writeFileSync(join(dir, ".env.example"), envExample);
+  writeFileSync(join(dir, ".env.example"), envExampleContent);
   writeFileSync(join(dir, ".gitignore"), ".env*\n!.env.example\n.vercel\n");
   writeFileSync(join(dir, "vercel.json"), "{}");
-  writeFileSync(join(dir, "supabase/schema.sql"), schemaSql);
+  writeFileSync(join(dir, "supabase/schema.sql"), schemaSqlContent);
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify(
@@ -68,7 +74,7 @@ function createRepoFixture({
   });
   execFileSync(
     "git",
-    ["config", "--local", "user.email", "vedantmahajan271@gmail.com"],
+    ["config", "--local", "user.email", gitEmail],
     { cwd: dir },
   );
   if (withRemote) {
@@ -130,4 +136,59 @@ test("deployment readiness fails closed when remote and required CLIs are missin
   assert.match(result.stdout, /FAIL GitHub CLI is installed/);
   assert.match(result.stdout, /FAIL Vercel CLI is installed/);
   assert.match(result.stderr, /3 deployment readiness check\(s\) failed/);
+});
+
+test("deployment readiness rejects the work git email", () => {
+  const fixture = createRepoFixture({
+    withRemote: true,
+    withFakeCli: true,
+    gitEmail: "vedant.mahajan@salescode.ai",
+  });
+  const result = runDeploymentReadiness(fixture.dir, fixture.env);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stdout,
+    /FAIL Repo-local git user\.email uses personal account - vedant\.mahajan@salescode\.ai/,
+  );
+});
+
+test("deployment readiness rejects non-placeholder secret values in env examples", () => {
+  const fixture = createRepoFixture({
+    withRemote: true,
+    withFakeCli: true,
+    envExampleContent: envExample.replace(
+      "GEMINI_API_KEY=",
+      "GEMINI_API_KEY=real-gemini-key",
+    ),
+  });
+  const result = runDeploymentReadiness(fixture.dir, fixture.env);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stdout,
+    /FAIL \.env\.example does not contain private secret values - non-placeholder: GEMINI_API_KEY/,
+  );
+  assert.match(
+    result.stdout,
+    /FAIL Tracked files do not contain obvious committed secrets/,
+  );
+});
+
+test("deployment readiness rejects incomplete Supabase schema", () => {
+  const fixture = createRepoFixture({
+    withRemote: true,
+    withFakeCli: true,
+    schemaSqlContent: schemaSql.replace(
+      "create table if not exists demo_sessions (id uuid primary key);",
+      "",
+    ),
+  });
+  const result = runDeploymentReadiness(fixture.dir, fixture.env);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stdout,
+    /FAIL Supabase schema includes required MVP tables - missing: demo_sessions/,
+  );
 });

@@ -10,6 +10,8 @@ import { join, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 const scriptPath = resolve("scripts/secret-scan.mjs");
+const cerebrasTokenFixture = ["c", "sk", "-1234567890abcdefghijklmnopqrstuvwxyz"].join("");
+const githubTokenFixture = ["gh", "p", "_1234567890abcdefghijklmnopqrstuvwxyz"].join("");
 
 function createGitFixture() {
   const dir = mkdtempSync(join(tmpdir(), "opsverse-secret-"));
@@ -54,7 +56,7 @@ test("secret scan fails on tracked provider tokens", () => {
   const cwd = createGitFixture();
   writeFileSync(
     join(cwd, "leak.txt"),
-    "CEREBRAS_API_KEY=csk-1234567890abcdefghijklmnopqrstuvwxyz",
+    `CEREBRAS_API_KEY=${cerebrasTokenFixture}`,
   );
   execFileSync("git", ["add", "leak.txt"], { cwd });
 
@@ -72,7 +74,7 @@ test("secret scan fails on built client assets with token-like values", () => {
   mkdirSync(join(cwd, ".next", "static", "chunks"), { recursive: true });
   writeFileSync(
     join(cwd, ".next", "static", "chunks", "client.js"),
-    "window.__token='ghp_1234567890abcdefghijklmnopqrstuvwxyz';",
+    `window.__token='${githubTokenFixture}';`,
   );
   execFileSync("git", ["add", "README.md"], { cwd });
 
