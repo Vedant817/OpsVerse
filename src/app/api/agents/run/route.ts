@@ -122,7 +122,7 @@ export async function POST(request: Request) {
         await saveAgentRuns(persistence.incident_id, result.agent_runs);
         persistence.saved_agent_runs = true;
 
-        if (completed) {
+        if (completed && result.runtime?.mode === "live_cerebras") {
           await saveSpeedBenchmarkData(
             persistence.incident_id,
             result,

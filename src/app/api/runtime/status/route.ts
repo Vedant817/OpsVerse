@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { checkCerebrasModelReadiness } from "@/lib/cerebras/client";
 import {
+  getCerebrasAgentConcurrencyEnv,
   getCerebrasEnv,
   getGeminiBaselineEnv,
+  getLocalAgentModeEnv,
   getSupabaseEnv,
   isEnvConfigError,
 } from "@/lib/env";
@@ -39,6 +41,9 @@ async function cerebrasStatus() {
       available_models: readiness.availableModels,
       checked_at: readiness.checkedAt,
       base_url_origin: safeOrigin(env.CEREBRAS_BASE_URL),
+      request_timeout_ms: env.CEREBRAS_REQUEST_TIMEOUT_MS,
+      agent_concurrency:
+        getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
       missing: [] as string[],
       note: readiness.ready
         ? "Configuration is present and the configured Gemma model is available. Use /api/benchmark for a live generation probe before claiming full model success."
@@ -61,6 +66,9 @@ async function cerebrasStatus() {
         available_models: [] as string[],
         checked_at: null,
         base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
+        request_timeout_ms: Number(process.env.CEREBRAS_REQUEST_TIMEOUT_MS) || null,
+        agent_concurrency:
+          getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
         missing: error.missing,
         note: error.message,
       };
@@ -75,6 +83,8 @@ async function cerebrasStatus() {
       available_models: [] as string[],
       checked_at: null,
       base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
+      request_timeout_ms: Number(process.env.CEREBRAS_REQUEST_TIMEOUT_MS) || null,
+      agent_concurrency: getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
       missing: [] as string[],
       note: safeErrorMessage(error),
     };
@@ -143,6 +153,18 @@ function baselineStatus() {
   };
 }
 
+function localAgentModeStatus() {
+  const env = getLocalAgentModeEnv();
+
+  return {
+    enabled: env.enabled,
+    value: env.OPSVERSE_LOCAL_AGENT_MODE,
+    note: env.enabled
+      ? "Local deterministic demo agent mode is enabled. Swarm outputs are derived from submitted evidence without provider calls and must not be claimed as live Gemma or Cerebras execution."
+      : "Local deterministic demo agent mode is disabled. Swarm routes use live Cerebras Gemma execution when configured.",
+  };
+}
+
 export async function GET() {
   return NextResponse.json(
     {
@@ -154,6 +176,7 @@ export async function GET() {
       },
       cerebras: await cerebrasStatus(),
       baseline: baselineStatus(),
+      local_agent_mode: localAgentModeStatus(),
       supabase: supabaseStatus(),
     },
     {

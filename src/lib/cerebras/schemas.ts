@@ -134,9 +134,15 @@ export const agentRunSchema = z.object({
   metrics: agentMetricsSchema.nullable(),
 });
 
+export const executionRuntimeSchema = z.object({
+  mode: z.union([z.literal("live_cerebras"), z.literal("local_demo")]),
+  label: z.string(),
+  note: z.string(),
+});
+
 export const finalIncidentPackageSchema = z.object({
   incident: incidentEvidenceSchema,
-    agent_runs: z.array(agentRunSchema),
+  agent_runs: z.array(agentRunSchema),
   outputs: z.object({
     intake: intakeOutputSchema.nullable(),
     vision: visionOutputSchema.nullable(),
@@ -148,6 +154,7 @@ export const finalIncidentPackageSchema = z.object({
     release: releaseRiskOutputSchema.nullable(),
     narrator: demoNarratorOutputSchema.nullable(),
   }),
+  runtime: executionRuntimeSchema.optional(),
 });
 
 export type IncidentEvidence = z.infer<typeof incidentEvidenceSchema>;
@@ -161,4 +168,5 @@ export type RegressionTestOutput = z.infer<typeof regressionTestOutputSchema>;
 export type ReleaseRiskOutput = z.infer<typeof releaseRiskOutputSchema>;
 export type DemoNarratorOutput = z.infer<typeof demoNarratorOutputSchema>;
 export type AgentRun = z.infer<typeof agentRunSchema>;
+export type ExecutionRuntime = z.infer<typeof executionRuntimeSchema>;
 export type FinalIncidentPackage = z.infer<typeof finalIncidentPackageSchema>;

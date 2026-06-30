@@ -92,12 +92,16 @@ Edit `.env.local`:
 CEREBRAS_API_KEY=
 CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
 CEREBRAS_MODEL=gemma-4-31b
+CEREBRAS_REQUEST_TIMEOUT_MS=20000
+CEREBRAS_AGENT_CONCURRENCY=1
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
+OPSVERSE_LOCAL_AGENT_MODE=disabled
 
 BASELINE_PROVIDER_ENABLED=false
 GEMINI_API_KEY=
@@ -197,6 +201,8 @@ Do not add a live URL to this README until the deployed app has been manually ve
 
 If the Cerebras model call fails, the UI displays failed agents and provider errors. If the configured model is unavailable, `/api/runtime/status` reports the provider's available model IDs and `/api/benchmark` returns HTTP `424`.
 
+For local development only, set `OPSVERSE_LOCAL_AGENT_MODE=enabled` to run the same intake, streaming, graph, results, export, and dashboard UI path with deterministic evidence-derived outputs. The Runtime panel and completion banner label this mode clearly, no Cerebras speed metrics are generated, and it must not be claimed as live Gemma or Cerebras execution.
+
 The recording script, shot list, and submission drafts are in [`docs/demo-and-submission.md`](docs/demo-and-submission.md). That file intentionally uses verified-link placeholders until the live app, GitHub repository, and demo video exist.
 
 Before posting the final submission, run:
@@ -215,11 +221,12 @@ This check is expected to fail until the demo video, Vercel production URL, and 
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only.
 - Speed metrics and provider benchmarks are shown only from completed provider responses.
 - Gemini baseline comparison is opt-in with `BASELINE_PROVIDER_ENABLED=true`, `GEMINI_API_KEY`, and `GEMINI_MODEL`.
-- Demo/mock output must be explicitly labeled if added later.
+- Local deterministic demo output is opt-in with `OPSVERSE_LOCAL_AGENT_MODE=enabled`, visibly labeled, and excluded from Cerebras speed benchmark persistence.
 
 ## Current Known Blockers
 
-- The current local Cerebras key lists `gpt-oss-120b` and `zai-glm-4.7`; it does not list `gemma-4-31b`, so `/api/benchmark` returns HTTP `424` and the app keeps Gemma-dependent agents failed instead of falling back to a non-Gemma model. Configuring one of those non-Gemma models is also rejected by policy. Do not claim live Gemma 4 success until a real Gemma provider call succeeds.
+- Live `gemma-4-31b` benchmark connectivity is verified through `/api/benchmark`, including latency, token usage, and `time_info`.
+- The full live swarm still returns structured failed-agent diagnostics in this environment: the tiny PNG Vision probe receives provider HTTP `400`, and the text agents currently receive provider HTTP `429`. The route now has bounded request timeouts and configurable provider concurrency, so these failures are visible instead of hanging or falling back to fake output.
 - Supabase persistence is implemented but live insert/select refresh is not verified until valid Supabase environment variables are configured.
 - Deployment, demo video, live app link, and submission links are intentionally absent until verified.
 

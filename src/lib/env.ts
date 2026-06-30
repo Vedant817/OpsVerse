@@ -20,6 +20,12 @@ const cerebrasEnvSchema = z.object({
     .url()
     .default("https://api.cerebras.ai/v1"),
   CEREBRAS_MODEL: z.string().trim().min(1).default("gemma-4-31b"),
+  CEREBRAS_REQUEST_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(120_000)
+    .default(20_000),
 });
 
 export type CerebrasEnv = z.infer<typeof cerebrasEnvSchema>;
@@ -47,11 +53,28 @@ export type GeminiBaselineEnv = z.infer<typeof geminiBaselineEnvSchema> & {
   enabled: boolean;
 };
 
+const localAgentModeEnvSchema = z.object({
+  OPSVERSE_LOCAL_AGENT_MODE: z.string().trim().default("disabled"),
+});
+
+export type LocalAgentModeEnv = z.infer<typeof localAgentModeEnvSchema> & {
+  enabled: boolean;
+};
+
+const cerebrasAgentConcurrencyEnvSchema = z.object({
+  CEREBRAS_AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(1),
+});
+
+export type CerebrasAgentConcurrencyEnv = z.infer<
+  typeof cerebrasAgentConcurrencyEnvSchema
+>;
+
 export function getCerebrasEnv(): CerebrasEnv {
   const parsed = cerebrasEnvSchema.safeParse({
     CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
     CEREBRAS_BASE_URL: process.env.CEREBRAS_BASE_URL,
     CEREBRAS_MODEL: process.env.CEREBRAS_MODEL,
+    CEREBRAS_REQUEST_TIMEOUT_MS: process.env.CEREBRAS_REQUEST_TIMEOUT_MS,
   });
 
   if (!parsed.success) {
@@ -77,6 +100,24 @@ export function getGeminiBaselineEnv(): GeminiBaselineEnv {
     ...parsed,
     enabled: parsed.BASELINE_PROVIDER_ENABLED.toLowerCase() === "true",
   };
+}
+
+export function getLocalAgentModeEnv(): LocalAgentModeEnv {
+  const parsed = localAgentModeEnvSchema.parse({
+    OPSVERSE_LOCAL_AGENT_MODE: process.env.OPSVERSE_LOCAL_AGENT_MODE,
+  });
+  const normalized = parsed.OPSVERSE_LOCAL_AGENT_MODE.toLowerCase();
+
+  return {
+    ...parsed,
+    enabled: normalized === "enabled" || normalized === "true",
+  };
+}
+
+export function getCerebrasAgentConcurrencyEnv(): CerebrasAgentConcurrencyEnv {
+  return cerebrasAgentConcurrencyEnvSchema.parse({
+    CEREBRAS_AGENT_CONCURRENCY: process.env.CEREBRAS_AGENT_CONCURRENCY,
+  });
 }
 
 export function isEnvConfigError(error: unknown): error is EnvConfigError {

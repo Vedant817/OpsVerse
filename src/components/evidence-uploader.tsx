@@ -105,6 +105,8 @@ type RuntimeStatus = {
     available_models: string[];
     checked_at: string | null;
     base_url_origin: string | null;
+    request_timeout_ms: number | null;
+    agent_concurrency: number;
     missing: string[];
     note: string;
   };
@@ -120,6 +122,11 @@ type RuntimeStatus = {
     provider: "gemini";
     model: string;
     missing: string[];
+    note: string;
+  };
+  local_agent_mode: {
+    enabled: boolean;
+    value: string;
     note: string;
   };
 };
@@ -1104,9 +1111,16 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                     Incident swarm complete
                   </div>
                   <p className="mt-2 leading-6">
-                    The server streamed real agent events and returned structured
-                    output from the live route.
+                    {runPackage?.runtime?.mode === "local_demo"
+                      ? "The server streamed the explicitly enabled local deterministic demo mode and returned structured output derived from the submitted evidence."
+                      : "The server streamed real agent events and returned structured output from the live route."}
                   </p>
+                  {runPackage?.runtime ? (
+                    <p className="mt-2 rounded border border-[#b8d9d4] bg-white/70 p-3 text-xs leading-5">
+                      <span className="font-semibold">{runPackage.runtime.label}:</span>{" "}
+                      {runPackage.runtime.note}
+                    </p>
+                  ) : null}
                   {runResult?.persistence?.incident_id ? (
                     <a
                       href={`/dashboard/${runResult.persistence.incident_id}`}
@@ -1254,6 +1268,16 @@ function RuntimeStatusPanel({
                 : "baseline disabled"
             }
           />
+          <RuntimeStatusRow
+            label="Local demo"
+            configured={status.local_agent_mode.enabled}
+            neutral={!status.local_agent_mode.enabled}
+            detail={
+              status.local_agent_mode.enabled
+                ? "enabled; deterministic evidence-derived output"
+                : "disabled; live Cerebras path required"
+            }
+          />
           <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">
             <p className="font-semibold text-[#555044]">App URL</p>
             <p className="mt-1 truncate font-mono text-[#161616]">
@@ -1269,14 +1293,20 @@ function RuntimeStatusPanel({
 function RuntimeStatusRow({
   label,
   configured,
+  neutral = false,
   detail,
 }: {
   label: string;
   configured: boolean;
+  neutral?: boolean;
   detail: string;
 }) {
   return (
-    <div className={`rounded border p-3 ${statusClass(configured)}`}>
+    <div
+      className={`rounded border p-3 ${
+        neutral ? "border-[#e2decf] bg-[#fbfaf5] text-[#625d52]" : statusClass(configured)
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{label}</span>
         {configured ? (

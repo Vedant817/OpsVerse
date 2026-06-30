@@ -21,6 +21,7 @@ Complete these before recording or posting:
 - Production URL must load the landing page and the incident workflow
 - Production sample run must show real agent completion or explicit real provider failures
 - Browser, logs, README, and commits must not expose private keys or private customer data
+- `OPSVERSE_LOCAL_AGENT_MODE` must be disabled for final submission unless the recording explicitly presents it as a local deterministic demo and makes no live Gemma/Cerebras speed claim
 
 Current known blockers are tracked in `task.md`. Do not record or submit as a
 finished product while the configured Gemma model, Supabase persistence, GitHub

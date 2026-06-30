@@ -208,15 +208,21 @@ export async function runGemmaAgent({
   await assertCerebrasModelAvailable();
   const startedAt = Date.now();
 
-  const response = await client.chat.completions.create({
-    model: env.CEREBRAS_MODEL,
-    messages,
-    temperature,
-    response_format: responseFormat,
-    reasoning_effort: reasoningEffort,
-  } as ChatCompletionCreateParamsNonStreaming & {
-    reasoning_effort: ReasoningEffort;
-  });
+  const response = await client.chat.completions.create(
+    {
+      model: env.CEREBRAS_MODEL,
+      messages,
+      temperature,
+      response_format: responseFormat,
+      reasoning_effort: reasoningEffort,
+    } as ChatCompletionCreateParamsNonStreaming & {
+      reasoning_effort: ReasoningEffort;
+    },
+    {
+      maxRetries: 0,
+      timeout: env.CEREBRAS_REQUEST_TIMEOUT_MS,
+    },
+  );
 
   const latencyMs = Date.now() - startedAt;
   const usage = {
