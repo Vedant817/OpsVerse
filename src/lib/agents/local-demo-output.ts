@@ -79,11 +79,19 @@ function parseDbSnapshot(raw: string) {
     }),
   );
   const outlet = textMatch(raw, /(?:^|\n)(\d{6,})[,|\s]/, "submitted outlet");
+  const skuIndex = headers.findIndex((header) => /sku/i.test(header));
+  const skus =
+    skuIndex >= 0
+      ? rows
+          .map((row) => row[skuIndex])
+          .filter((sku) => sku.trim().length > 0)
+      : [];
 
   return {
     headers,
     blankFields,
     outlet,
+    skus,
   };
 }
 
@@ -282,28 +290,40 @@ function buildRegressionTests({
   api: ApiOutput;
   db: DbOutput;
 }): RegressionTestOutput {
+  const snapshot = parseDbSnapshot(incident.dbSnapshot);
+  const skuList =
+    snapshot.skus.length > 0 ? snapshot.skus.join(" and ") : "the submitted SKUs";
+
   return {
     manual_qa_steps: [
-      `Open ${incident.module}.`,
-      "Load the same outlet/SKU combination from the submitted evidence.",
+      `Login as a ${incident.module} user.`,
+      `Select outlet ${snapshot.outlet}.`,
+      `Add SKU ${skuList} to the affected workflow.`,
       `Trigger the workflow: ${incident.title}.`,
-      "Verify the user reaches the expected next screen or sees a field-level validation error.",
+      "Verify the user reaches the expected next screen and does not remain stuck on the current page.",
+      "If validation fails, verify the frontend shows a field-level error instead of silently blocking progress.",
     ],
     sql_validation: db.sql_checks,
     api_expectations: [
       {
-        behavior: `${api.endpoint} should accept normalized quantity fields for valid SKUs.`,
-        assertion: "response status is 200 for valid normalized input",
+        behavior: `${api.endpoint} should return 200 when valid SKUs are present.`,
+        assertion: "response.status === 200",
       },
       {
-        behavior: `${api.breaking_field} should never be null in successful summary responses.`,
-        assertion: "every returned confirmed quantity is numeric",
+        behavior: "response.orderSummary should not be null.",
+        assertion: "response.orderSummary != null",
+      },
+      {
+        behavior: "response.items[*].confirmedQty should contain numbers.",
+        assertion: "every response item confirmedQty is a number",
       },
     ],
-    api_regression_test: `POST ${api.endpoint} with normalized evidence should return 200 and a non-empty order summary.`,
+    api_regression_test: `POST ${api.endpoint} for outlet ${snapshot.outlet} and SKU ${skuList} should return 200 and a non-empty order summary when quantity fields are normalized.`,
     postman_assertions: [
-      "pm.expect(pm.response.code).to.be.oneOf([200, 422]);",
-      `pm.expect(pm.response.json()).to.have.nested.property('${api.breaking_field.replace(/\[(\d+)\]/g, ".$1")}');`,
+      "pm.expect(pm.response.code).to.eql(200);",
+      "pm.expect(pm.response.json().orderSummary).to.not.be.null;",
+      "pm.expect(pm.response.json().items).to.be.an('array').that.is.not.empty;",
+      "pm.response.json().items.forEach((item) => pm.expect(item.confirmedQty).to.be.a('number'));",
     ],
     karate_test: `Given path '${api.endpoint}'\nWhen method post\nThen status 200\nAnd match response.items[*].confirmedQty contains only '#number'`,
     edge_cases: ["null quantity", "blank CSV quantity", "zero quantity", "mixed case/piece quantity"],
