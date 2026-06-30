@@ -35,6 +35,45 @@ const requiredSubmissionLabels = [
   "GitHub:",
 ];
 
+const linkRequirements = [
+  {
+    label: "Demo:",
+    name: "demo video",
+    pattern: /^https:\/\/[^\s<>()]+$/i,
+    detail: "must be an https URL",
+  },
+  {
+    label: "Live app:",
+    name: "live app",
+    pattern: /^https:\/\/[^\s<>()]+$/i,
+    detail: "must be an https URL",
+  },
+  {
+    label: "GitHub:",
+    name: "GitHub repository",
+    pattern: /^https:\/\/github\.com\/[^/\s<>()]+\/[^/\s<>()]+\/?$/i,
+    detail: "must be an https://github.com/<owner>/<repo> URL",
+  },
+];
+
+function valuesAfterLabel(content, label) {
+  const lines = content.split(/\r?\n/);
+  const values = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].trim() !== label) {
+      continue;
+    }
+
+    const nextValue = lines
+      .slice(index + 1)
+      .find((line) => line.trim().length > 0);
+    values.push(nextValue?.trim() ?? "");
+  }
+
+  return values;
+}
+
 console.log("OpsVerse submission readiness");
 console.log("=============================");
 
@@ -60,6 +99,23 @@ if (!existsSync(resolve(root, runbookPath))) {
     "Submission drafts include link labels",
     missingLabels.length === 0,
     missingLabels.length ? `missing: ${missingLabels.join(", ")}` : "demo/live/GitHub labels present",
+  );
+
+  const invalidLinks = [];
+  for (const requirement of linkRequirements) {
+    const values = valuesAfterLabel(content, requirement.label);
+    for (const [index, value] of values.entries()) {
+      if (!requirement.pattern.test(value)) {
+        invalidLinks.push(
+          `${requirement.name} #${index + 1} ${requirement.detail}: ${value || "missing"}`,
+        );
+      }
+    }
+  }
+  addCheck(
+    "Submission draft links are verified public URLs",
+    invalidLinks.length === 0,
+    invalidLinks.join("; ") || "all link values are public URLs",
   );
 
   const placeholders = unique(

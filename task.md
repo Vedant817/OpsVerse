@@ -1414,8 +1414,10 @@ Verification note:
 - Added `docs/demo-and-submission.md` with the 60-second script, shot list, Track 1 draft, Track 3 draft, optional X/Twitter draft, and final link checklist. It uses explicit verified-link placeholders and states that it is not proof of recording, deployment, or submission.
 - README now links to the runbook from the Demo Flow section.
 - Added `scripts/submission-readiness.mjs` and `npm run verify:submission` as a fail-closed final submission gate. It validates the runbook sections and link labels, rejects local-only URLs and premature external-completion claims, and fails while verified demo/live/GitHub placeholders remain.
-- `npm run verify:submission` currently passes runbook existence, required sections, required link labels, no premature completion claims, and no local-only URLs; it fails as expected because `<verified demo video link>`, `<verified Vercel production link>`, and `<verified GitHub repository link>` remain unresolved.
-- `npm run lint`, `npm run typecheck`, and `npm run verify:secrets` passed after adding the submission readiness gate.
+- Hardened `npm run verify:submission` to require each `Demo:` and `Live app:` value to be an `https://` public URL and each `GitHub:` value to be an `https://github.com/<owner>/<repo>` URL.
+- `npm run verify:submission` currently passes runbook existence, required sections, required link labels, no premature completion claims, and no local-only URLs; it fails as expected because `<verified demo video link>`, `<verified Vercel production link>`, and `<verified GitHub repository link>` remain unresolved and are not public URLs.
+- Added `tests/submission-readiness.test.ts`, covering both fail-closed placeholder behavior and passing behavior for verified public demo/live/GitHub links.
+- `npm run lint`, `npm run typecheck`, `npm test`, and `npm run verify:secrets` passed after hardening the submission readiness gate. The test suite now has 32 tests.
 
 ### 18.5 Optional X/Twitter Post
 
@@ -1463,7 +1465,7 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` currently passes with 30 tests.
+- `npm test` currently passes with 32 tests.
 - `npm run verify:local` previously passed after the test slice. After the final-output contract slice it passed typecheck, lint, and tests, then Turbopack hit a sandbox-only port-binding panic during build; the same `npm run build` command passed outside the sandbox, and `npm run verify:secrets` plus `npm audit --audit-level=moderate` passed afterward.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
