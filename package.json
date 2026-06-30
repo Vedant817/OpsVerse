@@ -14,7 +14,8 @@
     "verify:local": "npm run typecheck && npm run lint && npm test && npm run build && npm run verify:secrets && npm audit --audit-level=moderate",
     "verify:deployment": "node scripts/deployment-readiness.mjs",
     "verify:submission": "node scripts/submission-readiness.mjs",
-    "verify:preflight": "node scripts/runtime-preflight-check.mjs"
+    "verify:preflight": "node scripts/runtime-preflight-check.mjs",
+    "verify:primary-sample": "node --import tsx scripts/primary-sample-check.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

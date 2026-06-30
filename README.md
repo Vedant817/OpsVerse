@@ -144,11 +144,14 @@ Browser smoke check:
 npm run dev -- --hostname 127.0.0.1 --port 3000
 npm run verify:ui
 npm run verify:preflight
+npm run verify:primary-sample
 ```
 
 The UI check uses local Chrome through the Chrome DevTools Protocol. It verifies `/` and `/incident` at desktop and mobile widths, checks required visible copy, fails on console/runtime errors, and fails on document-level horizontal overflow.
 
 `npm run verify:preflight` calls `/api/runtime/preflight` on the running app. It fails when the primary sample is not runnable, sample evidence no longer validates, or live AI is blocked without explicit local demo mode. Supabase persistence is reported as a warning until live insert/select refresh is configured and verified.
+
+`npm run verify:primary-sample` posts the bundled primary sample to `/api/agents/run`, validates the returned final incident package, requires completed agent outputs, applies the output quality gates, and requires live Cerebras mode unless `PRIMARY_SAMPLE_ALLOW_LOCAL_DEMO=true` is explicitly set for local-demo-only verification.
 
 Useful API smoke checks:
 

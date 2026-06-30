@@ -1012,6 +1012,7 @@ Verification note:
 - Added Cerebras retry/backoff handling, a structured-output repair retry, schema normalization for common provider shapes, and an explicitly labeled Vision submitted-notes fallback after image transport HTTP 400.
 - Verified over HTTP with a valid primary sample payload: `/api/agents/run` returned HTTP 200 with `runtime.mode: "live_cerebras"`, 9 complete agent runs, 9 metric-bearing runs, RCA, regression tests, release gate `BLOCK`, and narrator output.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `/api/agents/run` returned HTTP 200 for the primary sample with 9 complete local-demo agent runs, a complete final package, `Release Gate: BLOCK`, and no metrics. The route now skips speed benchmark persistence unless `result.runtime.mode === "live_cerebras"`.
+- Added `scripts/primary-sample-check.ts` and `npm run verify:primary-sample`, which posts the bundled primary sample to `/api/agents/run`, validates the final package schema, requires all nine agent outputs, applies output quality gates, requires provider metrics for live mode, and fails local demo mode unless `PRIMARY_SAMPLE_ALLOW_LOCAL_DEMO=true` is explicitly set.
 
 ### 11.3 Benchmark Route
 
@@ -1504,11 +1505,13 @@ npm test
 npm run verify:secrets
 npm run verify:ui
 npm run verify:preflight
+npm run verify:primary-sample
 ```
 
 If the project uses pnpm, replace `npm` with `pnpm`.
 `npm run verify:ui` requires a running local app, for example `npm run dev -- --hostname 127.0.0.1 --port 3000`.
 `npm run verify:preflight` also requires a running local app and calls `/api/runtime/preflight`.
+`npm run verify:primary-sample` requires a running local app and calls `/api/agents/run` with the bundled primary sample.
 
 Verification note:
 
@@ -1517,6 +1520,7 @@ Verification note:
 - Added `npm run verify:secrets` for tracked-file secret-pattern scanning.
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm run verify:preflight` for repeatable primary-demo readiness checks against `/api/runtime/preflight`.
+- Added `npm run verify:primary-sample` for repeatable full primary-sample route verification against `/api/agents/run`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
 - `npm test` currently passes with 49 tests.
@@ -1524,6 +1528,7 @@ Verification note:
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
 - `npm run verify:preflight` passed against a local dev server with 0 blockers, primary sample runnable, live Cerebras ready, 3 valid samples, and a Supabase persistence warning.
+- `npm run verify:primary-sample` passed against a local dev server in live Cerebras mode. It called `/api/agents/run`, completed 9 agents, validated all required outputs, found 0 output-quality blockers, found provider metrics on 9 runs, and verified release gate `BLOCK`. The run took about 117 seconds.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `npm run verify:ui` passed against `http://127.0.0.1:3003`, and HTTP checks verified the primary sample plus both additional samples complete through the local demo route with no provider metrics.
 - With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP checks verified the primary sample completes through the live Gemma route with 9 complete metric-bearing runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
