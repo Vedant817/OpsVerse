@@ -1233,7 +1233,7 @@ Only start these after the MVP is locally working and deployable.
 - [x] Slack-style incident timeline.
 - [x] Baseline comparison with Gemini.
 - [x] RAG from synthetic runbook.
-- [ ] Ask follow-up chat over incident evidence.
+- [x] Ask follow-up chat over incident evidence.
 
 Acceptance criteria:
 
@@ -1259,6 +1259,10 @@ Verification note:
 - Added optional Gemini baseline comparison through `/api/benchmark`, runtime status, and the Speed Metrics tab. The baseline uses a real Gemini API request only when explicitly enabled and configured; otherwise it reports disabled or missing config.
 - Added `GEMINI_MODEL=gemini-3.5-flash` to `.env.example` and README setup docs.
 - `npm run verify:ui` passed after adding the benchmark control and runtime Gemini status row.
+- Added `src/lib/followup/evidence-chat.ts` and `src/components/follow-up-chat.tsx` for grounded follow-up Q&A over the current incident package, completed outputs, PR diff analysis, and synthetic runbook matches.
+- Added an `Ask` result tab; unsupported questions return an explicit no-evidence answer instead of hallucinated incident details.
+- Added `tests/evidence-chat.test.ts` covering grounded root-cause answers, SQL answers, unsupported-question refusal, and exported supported prompts.
+- `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed after the Ask tab slice. Build, audit, dev server, and browser smoke required unsandboxed execution because the managed sandbox blocks port binding/network/Chrome DevTools.
 
 ---
 

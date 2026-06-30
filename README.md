@@ -193,7 +193,7 @@ Do not add a live URL to this README until the deployed app has been manually ve
 2. Optionally upload a PNG/JPEG/WebP screenshot or representative frame.
 3. Click `Run Incident Swarm`.
 4. Watch the agent graph update from real route output.
-5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, Speed Metrics, Timeline, PR Diff, and Runbook tabs.
+5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, Speed Metrics, Timeline, PR Diff, Runbook, and Ask tabs.
 
 If the Cerebras model call fails, the UI displays failed agents and provider errors. If the configured model is unavailable, `/api/runtime/status` reports the provider's available model IDs and `/api/benchmark` returns HTTP `424`.
 
@@ -215,6 +215,5 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 
 ## Future Scope
 
-- Follow-up chat over the incident evidence.
 - Live production deployment and demo recording after provider and hosting credentials are configured.
 - Real Jira/GitHub integrations if the MVP needs authenticated external workflow writes later.

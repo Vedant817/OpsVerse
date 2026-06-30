@@ -1,5 +1,6 @@
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { analyzePrDiff } from "@/lib/diff/pr-diff-analysis";
+import { defaultFollowUpQuestions } from "@/lib/followup/evidence-chat";
 import { retrieveRunbookMatchesForPackage } from "@/lib/runbook/synthetic-runbook";
 
 const unavailable = "Unavailable: responsible agent did not complete successfully.";
@@ -199,6 +200,10 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
           )
           .join("\n\n")
       : "- No synthetic runbook entry matched the supplied incident evidence.",
+    "",
+    "## Grounded Follow-up Questions",
+    "",
+    listOrUnavailable(defaultFollowUpQuestions),
     "",
     "## Evidence",
     "",

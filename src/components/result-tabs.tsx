@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
+import { FollowUpChat } from "@/components/follow-up-chat";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { JiraOutput } from "@/components/jira-output";
 import { PrDiffAnalysis } from "@/components/pr-diff-analysis";
@@ -36,6 +37,7 @@ const tabs = [
   "Timeline",
   "PR Diff",
   "Runbook",
+  "Ask",
   "Submission",
 ] as const;
 
@@ -324,6 +326,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
 
         {activeTab === "Runbook" ? (
           <RunbookMatches result={result} />
+        ) : null}
+
+        {activeTab === "Ask" ? (
+          <FollowUpChat result={result} />
         ) : null}
 
         {activeTab === "Submission" ? (
