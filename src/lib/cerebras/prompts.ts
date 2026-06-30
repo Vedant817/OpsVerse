@@ -177,6 +177,19 @@ Using the incident, RCA, API analysis, and DB analysis, generate:
 For a broken API contract, include positive-path expectations, non-null response
 shape assertions, and type assertions for fields that failed validation.
 
+Return exactly this JSON object shape:
+{
+  "manual_qa_steps": ["step"],
+  "sql_validation": ["SELECT ..."],
+  "api_expectations": [
+    { "behavior": "expected behavior", "assertion": "machine-checkable assertion" }
+  ],
+  "api_regression_test": "concise test description or code-like block",
+  "postman_assertions": ["pm.expect(...)"],
+  "karate_test": "Given ...\\nWhen ...\\nThen ...",
+  "edge_cases": ["edge case"]
+}
+
 Incident:
 ${JSON.stringify(incident, null, 2)}
 
@@ -219,6 +232,15 @@ Return:
 - reason
 - must_fix_before_release
 - recommended_tests
+
+Return exactly this JSON object shape:
+{
+  "release_gate": "BLOCK",
+  "risk_score": 0,
+  "reason": "release decision reason",
+  "must_fix_before_release": ["required fix"],
+  "recommended_tests": ["recommended test"]
+}
 
 Incident:
 ${JSON.stringify(incident, null, 2)}

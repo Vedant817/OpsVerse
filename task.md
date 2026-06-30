@@ -9,9 +9,9 @@ Current repository state:
 - [x] Product idea captured in `Idea.md`
 - [x] Next.js application scaffold exists
 - [x] Runtime dependencies installed
-- [~] Cerebras integration implemented
+- [x] Cerebras integration implemented
 - [x] Incident intake implemented
-- [~] Agent swarm implemented
+- [x] Agent swarm implemented
 - [~] Dashboard implemented
 - [~] Supabase persistence implemented
 - [!] Deployment completed
@@ -47,7 +47,7 @@ Acceptance criteria:
 
 - [x] User can understand within 5 seconds that this is an enterprise incident triage product.
 - [x] UI and README mention Gemma 4 on Cerebras.
-- [~] Product output is engineering-actionable, not only a summary.
+- [x] Product output is engineering-actionable, not only a summary.
 
 Verification note:
 
@@ -57,7 +57,7 @@ Verification note:
 - README keeps the hackathon positioning explicit for Track 1, Track 3, and optional People's Choice.
 - The UI labels the workflow as `Synthetic evidence only`, and all bundled samples remain synthetic.
 - `curl -s http://127.0.0.1:3000` returned `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
-- Product output is still marked `[~]` because the output surface is actionable, but complete live RCA/test/release generation is currently blocked by provider 400/429 failures on the full swarm path, even though `/api/benchmark` now verifies live `gemma-4-31b` connectivity.
+- Live `/api/agents/run` for the primary sample returned HTTP 200 with `runtime.mode: "live_cerebras"`, 9 complete agent runs, 9 metric-bearing runs, RCA, tests, release gate `BLOCK`, and narrator output. Vision used an explicitly labeled submitted-notes fallback after provider image transport returned HTTP 400, so direct pixel analysis remains partial.
 
 ---
 
@@ -279,7 +279,7 @@ Verification note:
 Acceptance criteria:
 
 - [x] "Load Demo Incident" fills every relevant form field.
-- [~] Primary sample produces the expected RCA shape.
+- [x] Primary sample produces the expected RCA shape.
 - [x] Data is clearly labeled synthetic.
 
 Verification note:
@@ -287,8 +287,9 @@ Verification note:
 - Added typed sample evidence in `src/lib/samples/cart-summary-failure.ts`.
 - The intake UI loads this sample through `loadSample`, filling title, module, screenshot note, a canvas-generated synthetic PNG screenshot data URI, video note, logs, API response, DB snapshot, and git diff.
 - Browser smoke verified `Run Demo Incident` displays `cart-summary-failure.synthetic.png` and submitting the sample reaches the Vision Agent model call path instead of skipping Vision for missing image evidence.
-- RCA shape is blocked until the configured Cerebras model returns successful live responses; the orchestrator and RCA agent code now exist.
-- With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, HTTP POST to `/api/agents/run` for the primary sample returned HTTP 200 with `runtime.mode: "local_demo"`, 9 complete agent runs, 0 provider metrics, `/api/cart/summary`, and `Release Gate: BLOCK`. This proves the expected RCA shape in explicitly labeled local demo mode only; the full live swarm remains blocked by current provider `400`/`429` responses even though `/api/benchmark` verifies live `gemma-4-31b` connectivity.
+- RCA shape is verified through the live Gemma swarm route.
+- With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, HTTP POST to `/api/agents/run` for the primary sample returned HTTP 200 with `runtime.mode: "local_demo"`, 9 complete agent runs, 0 provider metrics, `/api/cart/summary`, and `Release Gate: BLOCK`. This proves the expected RCA shape in explicitly labeled local demo mode without claiming provider execution.
+- With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP POST to `/api/agents/run` for the primary sample returned HTTP 200 with `runtime.mode: "live_cerebras"`, 9 complete agent runs, 9 metric-bearing runs, a root-cause summary identifying the removed `confirmedQty ?? 0` fallback, and release gate `BLOCK`. Vision output was completed through the explicitly labeled submitted-notes fallback after provider image transport returned HTTP 400.
 
 ### 5.2 Additional Samples
 
@@ -309,7 +310,7 @@ Verification note:
 
 - Added `src/lib/samples/return-tracking-confirmed-qty.ts`, `src/lib/samples/order-tracking-items-missing.ts`, and `src/lib/samples/index.ts`.
 - The UI renders sample selector buttons for all three samples and updates client state without navigation.
-- Each sample can be submitted to `/api/agents/run`; live full-swarm output is currently blocked by provider 400/429 failures, while explicitly labeled local demo mode completes all samples.
+- Each sample can be submitted to `/api/agents/run`; the primary sample is verified through the live Gemma route, and all bundled samples are verified through explicitly labeled local demo mode.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, all three bundled samples completed through `/api/agents/run` with HTTP 200, `runtime.mode: "local_demo"`, 9 complete agent runs, 0 provider metrics, and `Release Gate: BLOCK`. Live Gemma output remains separately blocked.
 
 ---
@@ -343,7 +344,7 @@ Verification note:
 
 - Replaced the default Next.js starter page with the OpsVerse intake workspace in `src/app/page.tsx`.
 - The product headline is now rendered through `src/components/hero.tsx` with the exact first-viewport positioning line.
-- The hero copy intentionally uses the one-line product pitch and avoids over-claiming completed live RCA/test/release output while the current Cerebras key does not list the configured `gemma-4-31b` model.
+- The hero copy intentionally uses the one-line product pitch and avoids over-claiming direct pixel-level Vision while image transport remains partial.
 - `curl -s http://127.0.0.1:3000` showed `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
 - Added `scripts/browser-smoke.mjs` so browser verification no longer depends on `agent-browser` or Playwright in this environment.
 - `npm run verify:ui` passed for `/` and `/incident` at desktop `1440x1000` and mobile `390x900`, verifying key visible copy and document-level overflow.
@@ -362,7 +363,7 @@ Verification note:
   - Git diff textarea
 - [x] Add validation with useful error messages.
 - [x] Add sample loading buttons.
-- [~] Add "Run Incident Swarm" action.
+- [x] Add "Run Incident Swarm" action.
 - [x] Prevent empty submissions unless a sample incident is loaded.
 - [x] Show clear handling for optional evidence.
 
@@ -370,14 +371,14 @@ Acceptance criteria:
 
 - [x] User can manually paste logs/API/DB evidence.
 - [x] User can upload a screenshot.
-- [~] User can run the swarm from sample or manual evidence.
+- [x] User can run the swarm from sample or manual evidence.
 
 Verification note:
 
 - Added reusable client component `src/components/evidence-uploader.tsx` and route `src/app/incident/page.tsx`.
 - The button validates the evidence package, calls `/api/agents/run`, and renders the real execution graph/result tabs from the route payload. It does not fake swarm output.
 - `curl -s http://127.0.0.1:3000/incident` showed `OpsVerse`, `Synthetic evidence only`, all three sample names, and `Run Incident Swarm`.
-- Complete live swarm output remains blocked by the configured Cerebras model being unavailable for the current key, but failed agent states render without crashing.
+- Complete live swarm output now works for the primary sample through `runtime.mode: "live_cerebras"` with 9 complete metric-bearing agent runs. The Vision Agent clearly labels that it used submitted visual notes after provider image transport returned HTTP 400.
 - The completion banner now displays the package runtime label. In local demo mode it says the server streamed explicitly enabled deterministic demo output derived from submitted evidence, so local output cannot be confused with live Gemma execution.
 
 ### 6.3 Swarm Execution Page
@@ -408,7 +409,7 @@ Acceptance criteria:
 
 - [x] Running the swarm visibly updates agent states.
 - [x] Failed agents show error details and do not crash the page.
-- [~] RCA waits for Vision, Log, API, and DB outputs.
+- [x] RCA waits for Vision, Log, API, and DB outputs.
 
 Verification note:
 
@@ -490,7 +491,7 @@ Verification note:
 - Added `src/lib/baseline/gemini.ts` and `src/lib/baseline/gemini-response.ts` for optional live Gemini baseline probes when `BASELINE_PROVIDER_ENABLED=true` and `GEMINI_API_KEY` are configured.
 - Added a user-triggered `Run Benchmark` control in Speed Metrics; it calls `/api/benchmark` and renders Cerebras/Gemini results, failures, disabled state, or missing config without synthetic metrics.
 - HTTP smoke verified `/api/runtime/status` reports Gemini baseline disabled with `model: "gemini-3.5-flash"` and no key leakage.
-- HTTP smoke verified `/api/benchmark` with `includeBaseline:true` still returns the real Cerebras model-unavailable error and a disabled Gemini baseline object instead of fake comparison data.
+- HTTP smoke verified `/api/benchmark` returns real `gemma-4-31b` latency, token usage, tokens/sec, `time_info`, model content, and a disabled Gemini baseline object when baseline config is off.
 
 ---
 
@@ -607,7 +608,7 @@ Verification note:
 - Added `src/lib/cerebras/json.ts` and moved Vision/text agent JSON parsing to the shared production parser.
 - Added `tests/agent-contracts.test.ts` to verify mocked model JSON with wrapper text is parsed into typed outputs for every prompt/schema pair.
 - `npm test` passed with 6 tests covering bundled sample evidence, representative agent output schemas, mocked prompt/schema parsing, required confidence fields, invalid release-gate rejection, and final incident package validation.
-- Live Gemma JSON generation remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model, but valid model JSON parsing is now verified through the same parser used by runtime agents.
+- Live Gemma JSON generation is verified on the primary sample path; the structured parser now also retries malformed/empty JSON once and normalizes common schema-adjacent provider shapes.
 
 ### 8.3 Prompt Templates
 
@@ -635,7 +636,7 @@ Verification note:
 - Added prompts in `src/lib/cerebras/prompts.ts` for Vision, Log, API, DB, RCA, Regression Test, Release Risk, and Demo Narrator agents.
 - Added mocked contract tests that build every prompt, assert required output-field terms are present, and validate schema-correct mocked model JSON through the production parser.
 - Added required-confidence rejection tests for Vision, Log, API, DB, RCA, and RCA hypotheses.
-- Live prompt verification remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
+- Live prompt verification is now exercised through the primary sample path, which completes Vision fallback, Log, API, DB, RCA, Test, Release, and Narrator agents with real provider metrics.
 
 ### 8.4 Image Handling
 
@@ -664,12 +665,12 @@ Verification note:
 - The server validates every extracted video frame data URI before persistence or model calls.
 - Supabase persistence stores extracted frame arrays as `video_frame_data_uris`, and dashboard reconstruction loads them back into the final incident package.
 - `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
-- Live screenshot analysis remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
+- Direct screenshot pixel analysis remains partial because provider image transport returned HTTP 400 for the tiny PNG probe.
 - HTTP smoke verified invalid `data:text/plain` screenshot evidence returns HTTP 400 with a clear MIME error.
-- HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; the current provider key does not list `gemma-4-31b`, and the route returned a structured failed Vision run rather than fake image output.
-- HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted, reaches the Vision path, and returns a structured failed Vision run on the current model-unavailable provider path.
+- HTTP smoke verified a valid tiny PNG data URI reaches the Vision agent path; after image transport fails, the Vision Agent makes a second real Gemma call over submitted visual notes and labels the output as note-based, not direct pixel analysis.
+- HTTP SSE smoke verified a payload with three `videoFrameDataUris` is accepted and reaches the same Vision/orchestrator path.
 - Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
-- Browser smoke with local Chrome loaded the primary demo sample, verified the synthetic screenshot filename renders, submitted the sample, and confirmed Vision fails on the real model-unavailable path rather than `Vision skipped because no screenshot image...`.
+- Browser and HTTP smoke checks verified the loaded primary demo sample includes generated screenshot evidence, attempts the image path, and then completes through the labeled note fallback instead of fake visual output.
 
 ---
 
@@ -730,15 +731,15 @@ Verification note:
 - Added `src/lib/agents/vision-agent.ts`, which validates image evidence, sends real multimodal `image_url` content to Cerebras, parses JSON, and validates against `visionOutputSchema`.
 - If no image/frame is supplied, the Vision agent records a failed/skipped run instead of inventing screenshot understanding.
 - If image/frame evidence is supplied and Vision fails, RCA/Test/Release are gated rather than proceeding with fake visual analysis.
-- Live successful Vision output remains blocked because the current Cerebras key does not list the configured `gemma-4-31b` model.
-- HTTP smoke with a valid PNG data URI verified `vision_agent` executes and returns the live model-unavailable failure; `rca_agent` is skipped because required image evidence failed.
-- Browser smoke verified the loaded primary demo sample includes generated screenshot evidence, so `vision_agent` attempts the real multimodal model path and fails only because `gemma-4-31b` is unavailable for the current key.
+- Direct image transport remains partial because the provider returned HTTP 400 for the tiny PNG Vision probe.
+- Added an explicitly labeled Vision fallback that makes a real Gemma call over submitted screenshot/video notes only after image transport fails. The output says it is note-based and not direct pixel analysis.
+- HTTP smoke with a valid PNG data URI verified `vision_agent` completed through the submitted-notes fallback and allowed RCA/Test/Release/Narrator to complete on the live primary sample path.
 
 ### 9.3 Log Analysis Agent
 
 - [x] Implement `lib/agents/log-agent.ts`.
-- [~] Analyze backend logs.
-- [~] Extract:
+- [x] Analyze backend logs.
+- [x] Extract:
   - primary error
   - failing service
   - correlation ID
@@ -758,8 +759,8 @@ Expected output fields:
 ### 9.4 API Contract Agent
 
 - [x] Implement `lib/agents/api-agent.ts`.
-- [~] Analyze request and response JSON.
-- [~] Extract:
+- [x] Analyze request and response JSON.
+- [x] Extract:
   - endpoint
   - HTTP status
   - contract violation
@@ -780,8 +781,8 @@ Expected output fields:
 ### 9.5 DB Consistency Agent
 
 - [x] Implement `lib/agents/db-agent.ts`.
-- [~] Analyze DB snapshot.
-- [~] Identify:
+- [x] Analyze DB snapshot.
+- [x] Identify:
   - suspicious tables
   - inconsistent fields
   - missing values
@@ -797,11 +798,11 @@ Expected output fields:
 ### 9.6 Root Cause Agent
 
 - [x] Implement `lib/agents/rca-agent.ts`.
-- [~] Combine Vision, Log, API, and DB outputs.
-- [~] Produce three ranked root-cause hypotheses.
-- [~] Explain evidence supporting each hypothesis.
-- [~] Identify missing evidence.
-- [~] Produce final RCA summary.
+- [x] Combine Vision, Log, API, and DB outputs.
+- [x] Produce three ranked root-cause hypotheses.
+- [x] Explain evidence supporting each hypothesis.
+- [x] Identify missing evidence.
+- [x] Produce final RCA summary.
 
 Expected output fields:
 
@@ -813,7 +814,7 @@ Expected output fields:
 ### 9.7 Regression Test Agent
 
 - [x] Implement `lib/agents/test-agent.ts`.
-- [~] Generate:
+- [x] Generate:
   - manual QA reproduction steps
   - SQL validation checks
   - API regression test
@@ -831,7 +832,7 @@ Expected output fields:
 ### 9.8 Release Risk Agent
 
 - [x] Implement `lib/agents/release-agent.ts`.
-- [~] Decide release gate:
+- [x] Decide release gate:
   - PASS
   - WARN
   - BLOCK
@@ -884,8 +885,8 @@ Verification note:
 - The narrator runs last, after RCA, Regression Test, and Release Risk complete, and validates output with `demoNarratorOutputSchema`.
 - Added a `Submission` result tab that displays copyable demo script, Discord Track 1 post, Discord Track 3 post, and X/Twitter post only when `outputs.narrator` exists.
 - If upstream agents fail, the orchestrator records a skipped `narrator_agent` run instead of producing fake submission copy.
-- Live narrator generation remains blocked until the configured Cerebras model returns successful responses.
-- HTTP smoke verified `/api/agents/run` returns nine agent runs, including `narrator_agent`, and reports `Demo narration skipped because the incident package did not complete` on the current provider failure path.
+- Live narrator generation is verified on the primary sample path.
+- HTTP smoke verified `/api/agents/run` returns nine complete live agent runs, including `narrator_agent`, after retry/backoff, schema normalization, and Vision note fallback.
 
 ---
 
@@ -932,7 +933,7 @@ Verification note:
 - Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
 - Narrator remains gated on both Regression Test and Release Risk completion.
 - `npm run typecheck` and `npm run lint` passed after the release-agent contract change.
-- HTTP SSE smoke on the current provider-failure path still returned 5 started events, 9 completed agent runs, and a final `swarm_completed` event. The post-RCA parallel branch cannot be live-exercised until the configured `gemma-4-31b` model is available for the key.
+- The live JSON route now exercises the post-RCA Test/Release/Narrator branch successfully for the primary sample. SSE continues to use the same orchestrator path and still has earlier coverage for start/completion/final events.
 
 ### 10.2 Streaming
 
@@ -960,8 +961,8 @@ Verification note:
 - Agent metrics are included on `agent_completed` events and emitted as separate `metrics_updated` events only when the run contains real metrics.
 - Added heartbeat events every 10 seconds while the stream is open so long-running responses keep the transport visibly alive without inventing agent progress.
 - If the stream transport is unavailable or returns a non-SSE response before any events arrive, the UI now calls the real `/api/agents/run` route, clears fake active-agent state, and renders the actual JSON route package without inventing progress events.
-- HTTP smoke verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event. The current provider/model failure now appears as a model-unavailable failed agent output.
-- Forced non-SSE browser smoke intercepted `/api/agents/stream`, verified the UI fell back to `/api/agents/run`, and rendered the real failed package with `Agent Execution`, `Log Agent`, nine recorded runs, and the model-unavailable diagnostic.
+- HTTP smoke previously verified a valid synthetic incident produced `agent_started` events for Intake/Vision/Log/API/DB, `agent_completed` events for all nine agents, and a final `swarm_completed` event.
+- Forced non-SSE browser smoke intercepted `/api/agents/stream`, verified the UI fell back to `/api/agents/run`, and rendered the real route package with `Agent Execution`, `Log Agent`, and nine recorded runs.
 - HTTP SSE smoke after the metrics/heartbeat slice returned `agent_started: 5`, `agent_completed: 9`, `metrics_updated: 1`, and `swarm_completed: 1` on the real provider-failure path.
 - `tests/stream-events.test.ts` verifies heartbeat SSE serialization and confirms `metrics_updated` is emitted only for agent runs that contain real metrics.
 
@@ -1000,16 +1001,16 @@ Verification note:
 
 Acceptance criteria:
 
-- [~] "Run Incident Swarm" calls this route successfully.
-- [~] Route returns a complete incident package for the primary sample.
+- [x] "Run Incident Swarm" calls this route successfully.
+- [x] Route returns a complete incident package for the primary sample.
 
 Verification note:
 
 - `/api/agents/run` now accepts raw incident evidence or `incident_id` / `incidentId`.
 - When Supabase is configured, raw evidence is saved before the swarm runs, agent runs are saved after execution, and completed swarms save aggregate Cerebras speed benchmark data.
 - When Supabase is not configured, persistence is explicitly reported as disabled and no fake durable storage is claimed.
-- Complete primary sample output is no longer blocked by missing model availability; `/api/benchmark` verifies live `gemma-4-31b`. The full live swarm still returns failed-agent diagnostics because the current provider path returns `400` for the tiny PNG Vision probe and `429` for text agents.
-- Verified over HTTP with a valid sample payload after the timeout/concurrency slice: `/api/agents/run` returned HTTP 502 with `runtime.mode: "live_cerebras"`, nine agent runs from Intake through Narrator, one completed run with metrics, and explicit provider 400/429 failed-agent errors instead of hanging or returning fake output.
+- Added Cerebras retry/backoff handling, a structured-output repair retry, schema normalization for common provider shapes, and an explicitly labeled Vision submitted-notes fallback after image transport HTTP 400.
+- Verified over HTTP with a valid primary sample payload: `/api/agents/run` returned HTTP 200 with `runtime.mode: "live_cerebras"`, 9 complete agent runs, 9 metric-bearing runs, RCA, regression tests, release gate `BLOCK`, and narrator output.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `/api/agents/run` returned HTTP 200 for the primary sample with 9 complete local-demo agent runs, a complete final package, `Release Gate: BLOCK`, and no metrics. The route now skips speed benchmark persistence unless `result.runtime.mode === "live_cerebras"`.
 
 ### 11.3 Benchmark Route
@@ -1182,7 +1183,7 @@ Verification note:
 - Updated Summary, Root Cause, Tests, Jira Bug, Release Gate, markdown export, and PDF export surfaces to render these structured fields from the incident package instead of relying on loose prose.
 - `npm test` now covers the primary sample's expected hypotheses, QA steps, API expectations, Jira title, release gate, and must-fix items through the production JSON parser/schema path.
 - `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed for this final-output contract slice. `npm run verify:local` reached the build step after passing typecheck/lint/tests, then Turbopack hit a sandbox-only port-binding panic; rerunning `npm run build` outside the sandbox passed.
-- The primary AI-generated RCA/test/release expected outputs remain `[~]` because the current Cerebras key still does not list the configured `gemma-4-31b` model, so the live swarm cannot be honestly marked complete.
+- The primary AI-generated RCA/test/release expected outputs are now live-verified through `/api/agents/run`: RCA identifies the removed `confirmedQty ?? 0` fallback, regression output is generated, and release gate is `BLOCK`.
 
 ---
 
@@ -1198,12 +1199,12 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [x] 6. Sample incident data implemented.
 - [x] 7. Landing page and incident upload shell.
 - [x] 8. Load sample incident into form.
-- [!] 9. Core text agents implemented: Log, API, DB.
-- [!] 10. RCA Agent implemented.
-- [!] 11. Test Agent implemented.
-- [!] 12. Release Agent implemented.
-- [~] 13. Orchestrator implemented.
-- [~] 14. Run Swarm button produces structured outputs.
+- [x] 9. Core text agents implemented: Log, API, DB.
+- [x] 10. RCA Agent implemented.
+- [x] 11. Test Agent implemented.
+- [x] 12. Release Agent implemented.
+- [x] 13. Orchestrator implemented.
+- [x] 14. Run Swarm button produces structured outputs.
 - [x] 15. Result tabs display RCA, Jira bug, tests, and release gate.
 - [~] 16. Multimodal screenshot upload and Vision Agent.
 - [x] 17. Agent graph and progress UI.
@@ -1307,7 +1308,7 @@ Verification note:
 
 - Replaced the scaffold README with OpsVerse-specific setup, architecture, agent swarm, multimodal input, Supabase, demo flow, verification, security, blockers, and future-scope documentation.
 - README intentionally does not include screenshots, live app URL, GitHub URL, or demo video URL because those artifacts are not verified yet.
-- README states the current provider/model blocker instead of claiming live Gemma 4 success.
+- README states current live Gemma success, the remaining direct image transport caveat, and the unresolved Supabase/deployment blockers without claiming unverified production deployment.
 
 ---
 
@@ -1356,7 +1357,7 @@ Verification note:
 - Added `tests/secret-scan.test.ts` to exercise the secret scanner in temporary git repositories. It verifies placeholder env values pass, tracked provider tokens fail, and token-like values in `.next/static` client assets fail.
 - `npm test`, `npm run lint`, `npm run typecheck`, and `npm run verify:secrets` passed after hardening the deployment readiness script coverage.
 - `npm run verify:deployment` now passes every local repository/configuration check and fails only on the expected external setup: missing git remote, missing GitHub CLI, and missing Vercel CLI.
-- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the full live swarm is blocked by current provider `400`/`429` responses even though live `gemma-4-31b` benchmark connectivity is verified.
+- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and direct Vision image transport is still partial because the provider returned HTTP 400 for the tiny PNG probe. The primary live swarm completes through an explicitly labeled submitted-notes fallback.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
 ---
@@ -1424,7 +1425,7 @@ Verification note:
 - Added a `Submission` result tab that surfaces Demo Narrator output when and only when the narrator agent has generated it from a completed incident package.
 - The tab provides copy actions for the combined submission kit, demo script, Track 1 post, and Track 3 post.
 - The tab explicitly says live app, GitHub, and demo video links must be added only after those artifacts are verified.
-- Demo recording and final submission links remain blocked until live model output, GitHub remote, Vercel deployment, and a recorded video exist.
+- Demo recording and final submission links remain blocked until a GitHub remote, Vercel deployment, and a recorded video exist. Live primary-sample model output is now locally verified.
 - Added `docs/demo-and-submission.md` with the 60-second script, shot list, Track 1 draft, Track 3 draft, optional X/Twitter draft, and final link checklist. It uses explicit verified-link placeholders and states that it is not proof of recording, deployment, or submission.
 - README now links to the runbook from the Demo Flow section.
 - Added `scripts/submission-readiness.mjs` and `npm run verify:submission` as a fail-closed final submission gate. It validates the runbook sections and link labels, rejects local-only URLs and premature external-completion claims, and fails while verified demo/live/GitHub placeholders remain.
@@ -1449,7 +1450,7 @@ Run relevant checks after each implementation slice.
 - [x] Lint passes.
 - [x] Build passes.
 - [x] Unit tests pass if tests exist.
-- [~] Primary sample incident works locally.
+- [x] Primary sample incident works locally.
 - [x] API routes return useful errors for invalid payloads.
 - [x] No secrets are committed.
 - [x] UI is responsive.
@@ -1479,13 +1480,14 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` currently passes with 43 tests.
+- `npm test` currently passes with 49 tests.
 - `npm run verify:local` previously passed after the test slice. After the final-output contract slice it passed typecheck, lint, and tests, then Turbopack hit a sandbox-only port-binding panic during build; the same `npm run build` command passed outside the sandbox, and `npm run verify:secrets` plus `npm audit --audit-level=moderate` passed afterward.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `npm run verify:ui` passed against `http://127.0.0.1:3003`, and HTTP checks verified the primary sample plus both additional samples complete through the local demo route with no provider metrics.
+- With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP checks verified the primary sample completes through the live Gemma route with 9 complete metric-bearing runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
-- Quality gates are still blocked from full `[x]` because the full live swarm currently returns provider `400`/`429` failed-agent diagnostics, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
+- Quality gates are still blocked from full `[x]` because direct Vision image transport is still partial, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 
 ---
 

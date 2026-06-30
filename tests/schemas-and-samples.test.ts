@@ -210,6 +210,56 @@ test("representative agent outputs validate against production schemas", () => {
   );
 });
 
+test("log output schema normalizes boolean repeated pattern values", () => {
+  const parsed = logOutputSchema.parse({
+    primary_error: "CartSummaryValidationException",
+    service: "order-service",
+    correlation_id: "req-8f32",
+    timestamp: "2026-06-28T18:45:21Z",
+    repeated_pattern: false,
+    failing_function_or_module: "CartSummaryValidator.validate",
+    probable_cause: "Null confirmedQty reached validation",
+    confidence: 0.82,
+  });
+
+  assert.equal(parsed.repeated_pattern, "No repeated pattern detected in supplied logs");
+});
+
+test("RCA hypothesis schema normalizes string supporting evidence", () => {
+  const parsed = rcaOutputSchema.parse({
+    ...outputs.rca,
+    hypotheses: [
+      {
+        hypothesis: "Backend summary API rejects confirmedQty",
+        confidence: 0.88,
+        supporting_evidence: "api_agent breaking_field",
+      },
+      ...outputs.rca.hypotheses.slice(1),
+    ],
+  });
+
+  assert.deepEqual(parsed.hypotheses[0].supporting_evidence, [
+    "api_agent breaking_field",
+  ]);
+});
+
+test("release schema normalizes string arrays from provider output", () => {
+  const parsed = releaseRiskOutputSchema.parse({
+    release_gate: "BLOCK",
+    risk_score: 88,
+    reason: "Core order placement journey is blocked.",
+    must_fix_before_release: "Restore confirmedQty default mapping.",
+    recommended_tests: "Cart summary null quantity regression.",
+  });
+
+  assert.deepEqual(parsed.must_fix_before_release, [
+    "Restore confirmedQty default mapping.",
+  ]);
+  assert.deepEqual(parsed.recommended_tests, [
+    "Cart summary null quantity regression.",
+  ]);
+});
+
 test("invalid release gates are rejected", () => {
   assert.throws(
     () =>

@@ -38,7 +38,13 @@ export const logOutputSchema = z.object({
   service: z.string(),
   correlation_id: z.string(),
   timestamp: z.string(),
-  repeated_pattern: z.string(),
+  repeated_pattern: z.union([z.string(), z.boolean()]).transform((value) =>
+    typeof value === "boolean"
+      ? value
+        ? "Repeated pattern detected in supplied logs"
+        : "No repeated pattern detected in supplied logs"
+      : value,
+  ),
   failing_function_or_module: z.string(),
   probable_cause: z.string(),
   confidence: z.number().min(0).max(1),
@@ -69,7 +75,9 @@ export const dbOutputSchema = z.object({
 export const rootCauseHypothesisSchema = z.object({
   hypothesis: z.string().trim().min(1),
   confidence: z.number().min(0).max(1),
-  supporting_evidence: z.array(z.string().trim().min(1)).min(1),
+  supporting_evidence: z
+    .union([z.array(z.string().trim().min(1)).min(1), z.string().trim().min(1)])
+    .transform((value) => (Array.isArray(value) ? value : [value])),
 });
 
 export const apiExpectationSchema = z.object({
@@ -106,8 +114,12 @@ export const releaseRiskOutputSchema = z.object({
   ]),
   risk_score: z.number().min(0).max(100),
   reason: z.string().trim().min(1),
-  must_fix_before_release: z.array(z.string().trim().min(1)).min(1),
-  recommended_tests: z.array(z.string().trim().min(1)).min(1),
+  must_fix_before_release: z
+    .union([z.array(z.string().trim().min(1)).min(1), z.string().trim().min(1)])
+    .transform((value) => (Array.isArray(value) ? value : [value])),
+  recommended_tests: z
+    .union([z.array(z.string().trim().min(1)).min(1), z.string().trim().min(1)])
+    .transform((value) => (Array.isArray(value) ? value : [value])),
 });
 
 export const demoNarratorOutputSchema = z.object({

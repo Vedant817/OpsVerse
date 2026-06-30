@@ -42,6 +42,8 @@ async function cerebrasStatus() {
       checked_at: readiness.checkedAt,
       base_url_origin: safeOrigin(env.CEREBRAS_BASE_URL),
       request_timeout_ms: env.CEREBRAS_REQUEST_TIMEOUT_MS,
+      retry_attempts: env.CEREBRAS_RETRY_ATTEMPTS,
+      retry_backoff_ms: env.CEREBRAS_RETRY_BACKOFF_MS,
       agent_concurrency:
         getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
       missing: [] as string[],
@@ -67,6 +69,8 @@ async function cerebrasStatus() {
         checked_at: null,
         base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
         request_timeout_ms: Number(process.env.CEREBRAS_REQUEST_TIMEOUT_MS) || null,
+        retry_attempts: Number(process.env.CEREBRAS_RETRY_ATTEMPTS) || null,
+        retry_backoff_ms: Number(process.env.CEREBRAS_RETRY_BACKOFF_MS) || null,
         agent_concurrency:
           getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
         missing: error.missing,
@@ -84,6 +88,8 @@ async function cerebrasStatus() {
       checked_at: null,
       base_url_origin: safeOrigin(process.env.CEREBRAS_BASE_URL),
       request_timeout_ms: Number(process.env.CEREBRAS_REQUEST_TIMEOUT_MS) || null,
+      retry_attempts: Number(process.env.CEREBRAS_RETRY_ATTEMPTS) || null,
+      retry_backoff_ms: Number(process.env.CEREBRAS_RETRY_BACKOFF_MS) || null,
       agent_concurrency: getCerebrasAgentConcurrencyEnv().CEREBRAS_AGENT_CONCURRENCY,
       missing: [] as string[],
       note: safeErrorMessage(error),

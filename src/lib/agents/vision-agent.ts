@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { runGemmaAgent } from "@/lib/cerebras/client";
+import { cerebrasErrorStatus } from "@/lib/cerebras/errors";
 import { parseStructuredJson } from "@/lib/cerebras/json";
 import { buildVisionAgentPrompt } from "@/lib/cerebras/prompts";
 import {
@@ -49,6 +50,30 @@ function imageEvidence(incident: IncidentEvidence) {
   ].filter((image): image is NonNullable<typeof image> => Boolean(image));
 
   return images.slice(0, 4);
+}
+
+function visualNotes(incident: IncidentEvidence) {
+  return [incident.screenshotNote, incident.videoNote]
+    .map((note) => note.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function noteFallbackPrompt(incident: IncidentEvidence, status: number) {
+  return `${buildVisionAgentPrompt(incident)}
+
+The provider rejected image_url evidence with HTTP ${status}. Use only the submitted screenshot/video notes below. Do not claim direct pixel inspection, and make the note-based fallback explicit in the JSON fields.
+
+Submitted visual notes:
+${visualNotes(incident)}`;
+}
+
+function annotateNoteFallback(output: VisionOutput, status: number): VisionOutput {
+  return visionOutputSchema.parse({
+    ...output,
+    visible_error: `Image transport fallback from submitted visual notes after provider HTTP ${status}; ${output.visible_error}`,
+    ui_state: `Note-based visual interpretation, not direct pixel analysis: ${output.ui_state}`,
+  });
 }
 
 export async function runVisionAgent(
@@ -110,6 +135,55 @@ export async function runVisionAgent(
       },
     };
   } catch (error) {
+    const status = cerebrasErrorStatus(error);
+    const notes = visualNotes(parsedIncident);
+
+    if (status === 400 && notes) {
+      try {
+        const result = await runGemmaAgent({
+          messages: [
+            {
+              role: "user",
+              content: noteFallbackPrompt(parsedIncident, status),
+            },
+          ],
+          responseFormat: {
+            type: "json_object",
+          },
+          reasoningEffort: "none",
+        });
+        const output = annotateNoteFallback(
+          parseStructuredJson(result.content, visionOutputSchema),
+          status,
+        );
+
+        return {
+          ok: true,
+          output,
+          run: {
+            agent_name: "vision_agent",
+            status: "complete",
+            output,
+            error: null,
+            metrics: {
+              latencyMs: result.latencyMs,
+              promptTokens: result.usage.promptTokens,
+              completionTokens: result.usage.completionTokens,
+              totalTokens: result.usage.totalTokens,
+              tokensPerSecond: result.tokensPerSecond,
+              timeInfo: result.timeInfo,
+            },
+          },
+        };
+      } catch (fallbackError) {
+        return failedRun(
+          `Vision image transport failed with provider HTTP ${status}, and note-based fallback also failed: ${
+            fallbackError instanceof Error ? fallbackError.message : "Unknown vision fallback error"
+          }`,
+        );
+      }
+    }
+
     return failedRun(error instanceof Error ? error.message : "Unknown vision error");
   }
 }

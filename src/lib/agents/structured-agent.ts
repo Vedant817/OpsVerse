@@ -31,39 +31,59 @@ export async function runStructuredAgent<T>({
   schema: z.ZodType<T>;
 }): Promise<StructuredAgentResult<T>> {
   try {
-    const result = await runGemmaAgent({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      responseFormat: {
-        type: "json_object",
-      },
-      reasoningEffort: "none",
-    });
+    let result: Awaited<ReturnType<typeof runGemmaAgent>> | null = null;
+    let parseError: unknown = null;
 
-    const output = parseStructuredJson(result.content, schema);
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      result = await runGemmaAgent({
+        messages: [
+          {
+            role: "user",
+            content:
+              attempt === 1
+                ? prompt
+                : `${prompt}
 
-    return {
-      ok: true,
-      output,
-      run: {
-        agent_name: agentName,
-        status: "complete",
-        output,
-        error: null,
-        metrics: {
-          latencyMs: result.latencyMs,
-          promptTokens: result.usage.promptTokens,
-          completionTokens: result.usage.completionTokens,
-          totalTokens: result.usage.totalTokens,
-          tokensPerSecond: result.tokensPerSecond,
-          timeInfo: result.timeInfo,
+Your previous response was empty, malformed, or did not match the required schema. Retry once and return only one complete valid JSON object with all required fields. Do not include markdown fences, prose, or partial JSON.`,
+          },
+        ],
+        responseFormat: {
+          type: "json_object",
         },
-      },
-    };
+        reasoningEffort: "none",
+      });
+
+      try {
+        const output = parseStructuredJson(result.content, schema);
+
+        return {
+          ok: true,
+          output,
+          run: {
+            agent_name: agentName,
+            status: "complete",
+            output,
+            error: null,
+            metrics: {
+              latencyMs: result.latencyMs,
+              promptTokens: result.usage.promptTokens,
+              completionTokens: result.usage.completionTokens,
+              totalTokens: result.usage.totalTokens,
+              tokensPerSecond: result.tokensPerSecond,
+              timeInfo: result.timeInfo,
+            },
+          },
+        };
+      } catch (error) {
+        parseError = error;
+
+        if (attempt >= 2) {
+          throw parseError;
+        }
+      }
+    }
+
+    throw parseError instanceof Error ? parseError : new Error("Invalid structured output");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown agent error";
 

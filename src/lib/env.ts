@@ -26,6 +26,13 @@ const cerebrasEnvSchema = z.object({
     .min(1_000)
     .max(120_000)
     .default(20_000),
+  CEREBRAS_RETRY_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(3),
+  CEREBRAS_RETRY_BACKOFF_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(10_000)
+    .default(1_200),
 });
 
 export type CerebrasEnv = z.infer<typeof cerebrasEnvSchema>;
@@ -75,6 +82,8 @@ export function getCerebrasEnv(): CerebrasEnv {
     CEREBRAS_BASE_URL: process.env.CEREBRAS_BASE_URL,
     CEREBRAS_MODEL: process.env.CEREBRAS_MODEL,
     CEREBRAS_REQUEST_TIMEOUT_MS: process.env.CEREBRAS_REQUEST_TIMEOUT_MS,
+    CEREBRAS_RETRY_ATTEMPTS: process.env.CEREBRAS_RETRY_ATTEMPTS,
+    CEREBRAS_RETRY_BACKOFF_MS: process.env.CEREBRAS_RETRY_BACKOFF_MS,
   });
 
   if (!parsed.success) {

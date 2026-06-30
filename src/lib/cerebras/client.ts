@@ -7,6 +7,11 @@ import type {
 } from "openai/resources/chat/completions";
 import { getCerebrasEnv } from "@/lib/env";
 import { gemmaModelPolicyMessage, isGemmaModel } from "@/lib/cerebras/model-policy";
+import {
+  cerebrasErrorStatus,
+  isRetryableCerebrasError,
+  retryDelayMs,
+} from "@/lib/cerebras/errors";
 
 export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
@@ -96,6 +101,14 @@ function getCerebrasClient() {
 
 function modelsUrl(baseUrl: string) {
   return `${baseUrl.replace(/\/$/, "")}/models`;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown Cerebras request error";
 }
 
 async function fetchCerebrasModelIds() {
@@ -207,22 +220,51 @@ export async function runGemmaAgent({
   const { client, env } = getCerebrasClient();
   await assertCerebrasModelAvailable();
   const startedAt = Date.now();
+  let response: Awaited<ReturnType<typeof client.chat.completions.create>> | null =
+    null;
+  let lastError: unknown = null;
 
-  const response = await client.chat.completions.create(
-    {
-      model: env.CEREBRAS_MODEL,
-      messages,
-      temperature,
-      response_format: responseFormat,
-      reasoning_effort: reasoningEffort,
-    } as ChatCompletionCreateParamsNonStreaming & {
-      reasoning_effort: ReasoningEffort;
-    },
-    {
-      maxRetries: 0,
-      timeout: env.CEREBRAS_REQUEST_TIMEOUT_MS,
-    },
-  );
+  for (let attempt = 1; attempt <= env.CEREBRAS_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      response = await client.chat.completions.create(
+        {
+          model: env.CEREBRAS_MODEL,
+          messages,
+          temperature,
+          response_format: responseFormat,
+          reasoning_effort: reasoningEffort,
+        } as ChatCompletionCreateParamsNonStreaming & {
+          reasoning_effort: ReasoningEffort;
+        },
+        {
+          maxRetries: 0,
+          timeout: env.CEREBRAS_REQUEST_TIMEOUT_MS,
+        },
+      );
+      break;
+    } catch (error) {
+      lastError = error;
+
+      if (
+        attempt >= env.CEREBRAS_RETRY_ATTEMPTS ||
+        !isRetryableCerebrasError(error)
+      ) {
+        break;
+      }
+
+      await sleep(
+        retryDelayMs(error, attempt, env.CEREBRAS_RETRY_BACKOFF_MS),
+      );
+    }
+  }
+
+  if (!response) {
+    const status = cerebrasErrorStatus(lastError);
+    const prefix = `Cerebras request failed after ${env.CEREBRAS_RETRY_ATTEMPTS} attempt${
+      env.CEREBRAS_RETRY_ATTEMPTS === 1 ? "" : "s"
+    }${status ? ` with status ${status}` : ""}`;
+    throw new Error(`${prefix}: ${errorMessage(lastError)}`);
+  }
 
   const latencyMs = Date.now() - startedAt;
   const usage = {

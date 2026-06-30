@@ -93,6 +93,8 @@ CEREBRAS_API_KEY=
 CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
 CEREBRAS_MODEL=gemma-4-31b
 CEREBRAS_REQUEST_TIMEOUT_MS=20000
+CEREBRAS_RETRY_ATTEMPTS=3
+CEREBRAS_RETRY_BACKOFF_MS=1200
 CEREBRAS_AGENT_CONCURRENCY=1
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -226,7 +228,8 @@ This check is expected to fail until the demo video, Vercel production URL, and 
 ## Current Known Blockers
 
 - Live `gemma-4-31b` benchmark connectivity is verified through `/api/benchmark`, including latency, token usage, and `time_info`.
-- The full live swarm still returns structured failed-agent diagnostics in this environment: the tiny PNG Vision probe receives provider HTTP `400`, and the text agents currently receive provider HTTP `429`. The route now has bounded request timeouts and configurable provider concurrency, so these failures are visible instead of hanging or falling back to fake output.
+- The primary live swarm completes through `/api/agents/run` with 9 metric-bearing Gemma runs, RCA, tests, narrator output, and release gate `BLOCK`.
+- Direct Vision image transport is still partial in this environment: the tiny PNG probe receives provider HTTP `400`. OpsVerse falls back to a real Gemma call over submitted visual notes and labels that output as note-based, not direct pixel analysis.
 - Supabase persistence is implemented but live insert/select refresh is not verified until valid Supabase environment variables are configured.
 - Deployment, demo video, live app link, and submission links are intentionally absent until verified.
 

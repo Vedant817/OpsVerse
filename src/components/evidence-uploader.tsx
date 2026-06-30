@@ -106,6 +106,8 @@ type RuntimeStatus = {
     checked_at: string | null;
     base_url_origin: string | null;
     request_timeout_ms: number | null;
+    retry_attempts: number | null;
+    retry_backoff_ms: number | null;
     agent_concurrency: number;
     missing: string[];
     note: string;
