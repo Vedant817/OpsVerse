@@ -46,7 +46,13 @@ const incidentPackage: FinalIncidentPackage = finalIncidentPackageSchema.parse({
   ],
   outputs: {
     intake: null,
-    vision: null,
+    vision: {
+      screen_type: "Direct Orders cart",
+      visible_error: "No visible frontend error",
+      ui_state: "Cart remains visible after Proceed to Summary",
+      affected_flow: "Cart to order summary",
+      confidence: 0.74,
+    },
     logs: {
       primary_error: "CartSummaryValidationException",
       service: "order-service",
@@ -169,6 +175,9 @@ test("incident report markdown includes RCA, tests, release gate, and evidence",
   assert.match(markdown, /Likely owner: Backend validation \+ frontend error handling/);
   assert.match(markdown, /Then status 200/);
   assert.match(markdown, /response\.items\[\*\]\.confirmedQty should contain numbers/);
+  assert.match(markdown, /## Output Quality Gates/);
+  assert.match(markdown, /Overall: PASS/);
+  assert.match(markdown, /PASS: API regression tests cover response shape/);
   assert.match(markdown, /Decision: BLOCK/);
   assert.match(markdown, /CartSummaryValidationException/);
 });

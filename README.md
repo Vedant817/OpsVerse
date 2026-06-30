@@ -26,6 +26,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Execute deterministic Intake plus Vision, Log, API, DB, RCA, Test, Release, and Narrator agent stages.
 - Validate model output with Zod schemas and show failed-agent states when provider calls fail.
 - Render the agent graph, result tabs, Jira output, release gate, speed metrics, and narrator submission output from route output.
+- Evaluate completed incident packages with output quality gates for RCA, screenshot understanding, reproduction steps, SQL, API tests, release risk, and primary demo alignment.
 - Persist incidents/evidence/agent runs when Supabase is configured.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
@@ -204,7 +205,7 @@ Do not add a live URL to this README until the deployed app has been manually ve
 2. Optionally upload a PNG/JPEG/WebP screenshot or representative frame.
 3. Click `Run Incident Swarm`.
 4. Watch the agent graph update from real route output.
-5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, Speed Metrics, Timeline, PR Diff, Runbook, and Ask tabs.
+5. Review Summary, Root Cause, Evidence, Tests, Jira Bug, Release Gate, Quality, Speed Metrics, Timeline, PR Diff, Runbook, and Ask tabs.
 
 If the Cerebras model call fails, the UI displays failed agents and provider errors. If the configured model is unavailable, `/api/runtime/status` reports the provider's available model IDs and `/api/benchmark` returns HTTP `424`.
 

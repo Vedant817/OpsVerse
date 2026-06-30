@@ -21,6 +21,7 @@ import {
   buildIncidentReportPdf,
   incidentReportSlug,
 } from "@/lib/exports/incident-report";
+import { evaluateOutputQuality } from "@/lib/quality/output-quality";
 
 type ResultTabsProps = {
   result: FinalIncidentPackage;
@@ -33,6 +34,7 @@ const tabs = [
   "Tests",
   "Jira Bug",
   "Release Gate",
+  "Quality",
   "Speed Metrics",
   "Timeline",
   "PR Diff",
@@ -125,6 +127,7 @@ export function ResultTabs({ result }: ResultTabsProps) {
   const [copiedLabel, setCopiedLabel] = useState("");
   const sqlChecks = result.outputs.db?.sql_checks ?? result.outputs.tests?.sql_validation ?? [];
   const reportSlug = incidentReportSlug(result);
+  const qualityReport = evaluateOutputQuality(result);
   const karateTest = result.outputs.tests?.karate_test ?? "";
   const releaseText = result.outputs.release
     ? `Release Gate: ${result.outputs.release.release_gate}\nRisk Score: ${result.outputs.release.risk_score}\nReason: ${result.outputs.release.reason}\nMust Fix:\n${result.outputs.release.must_fix_before_release.join("\n")}\nRecommended Tests:\n${result.outputs.release.recommended_tests.join("\n")}`
@@ -330,6 +333,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
           </div>
         ) : null}
 
+        {activeTab === "Quality" ? (
+          <QualityOutput report={qualityReport} />
+        ) : null}
+
         {activeTab === "Speed Metrics" ? (
           <SpeedMetrics agentRuns={result.agent_runs} />
         ) : null}
@@ -362,6 +369,63 @@ export function ResultTabs({ result }: ResultTabsProps) {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function qualityClass(status: "pass" | "warn" | "block") {
+  if (status === "pass") {
+    return "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]";
+  }
+
+  if (status === "warn") {
+    return "border-[#ead18f] bg-[#fff9e6] text-[#725300]";
+  }
+
+  return "border-[#f0b89d] bg-[#fff4ed] text-[#9a3412]";
+}
+
+function QualityOutput({
+  report,
+}: {
+  report: ReturnType<typeof evaluateOutputQuality>;
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className={`rounded border p-4 ${qualityClass(report.status)}`}>
+        <h3 className="text-sm font-semibold uppercase">Output Quality</h3>
+        <p className="mt-2 text-sm leading-6">
+          {report.pass} pass, {report.warn} warning
+          {report.warn === 1 ? "" : "s"}, {report.block} blocker
+          {report.block === 1 ? "" : "s"}.
+        </p>
+      </div>
+
+      <div className="grid gap-3">
+        {report.checks.map((check) => (
+          <div
+            key={check.id}
+            className={`rounded border p-4 ${qualityClass(check.status)}`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">{check.label}</h3>
+              <span className="rounded border border-current px-2 py-1 font-mono text-xs uppercase">
+                {check.status}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6">{check.detail}</p>
+            {check.evidence.length > 0 ? (
+              <ul className="mt-3 grid gap-2 text-sm leading-6">
+                {check.evidence.slice(0, 5).map((item) => (
+                  <li key={item} className="rounded bg-white/70 px-3 py-2">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

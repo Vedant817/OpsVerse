@@ -1,6 +1,7 @@
 import type { FinalIncidentPackage } from "@/lib/cerebras/schemas";
 import { analyzePrDiff } from "@/lib/diff/pr-diff-analysis";
 import { defaultFollowUpQuestions } from "@/lib/followup/evidence-chat";
+import { evaluateOutputQuality } from "@/lib/quality/output-quality";
 import { retrieveRunbookMatchesForPackage } from "@/lib/runbook/synthetic-runbook";
 
 const unavailable = "Unavailable: responsible agent did not complete successfully.";
@@ -92,6 +93,7 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
   const release = outputs.release;
   const prDiff = analyzePrDiff(incident.gitDiff);
   const runbookMatches = retrieveRunbookMatchesForPackage(result);
+  const qualityReport = evaluateOutputQuality(result);
   const metricsRows = agentRuns.map((run) =>
     [
       run.agent_name,
@@ -165,6 +167,20 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
     "## Jira-Ready Bug",
     "",
     buildJiraMarkdown(result),
+    "",
+    "## Output Quality Gates",
+    "",
+    `- Overall: ${qualityReport.status.toUpperCase()}`,
+    `- Pass: ${qualityReport.pass}`,
+    `- Warn: ${qualityReport.warn}`,
+    `- Block: ${qualityReport.block}`,
+    "",
+    qualityReport.checks
+      .map(
+        (check) =>
+          `- ${check.status.toUpperCase()}: ${check.label}. ${check.detail}`,
+      )
+      .join("\n"),
     "",
     "## Release Gate",
     "",

@@ -1095,8 +1095,8 @@ Verification note:
 - [x] Show issue title.
 - [x] Show affected module.
 - [x] Show severity.
-- [~] Show user impact.
-- [~] Show likely owner.
+- [x] Show user impact.
+- [x] Show likely owner.
 - [x] Show confidence.
 
 Expected primary sample output:
@@ -1112,42 +1112,42 @@ Confidence: 86%
 
 ### 12.2 Screenshot Understanding
 
-- [~] Show interpreted screen type.
-- [~] Show visible UI state.
-- [~] Show whether a frontend error is visible.
-- [~] Show affected flow.
+- [x] Show interpreted screen type.
+- [x] Show visible UI state.
+- [x] Show whether a frontend error is visible.
+- [x] Show affected flow.
 
 ### 12.3 Root-Cause Hypotheses
 
-- [~] Show at least three hypotheses.
-- [~] Rank hypotheses by confidence.
-- [~] Link each hypothesis to evidence.
+- [x] Show at least three hypotheses.
+- [x] Rank hypotheses by confidence.
+- [x] Link each hypothesis to evidence.
 - [x] Show missing evidence.
 
 Expected primary hypotheses:
 
-- [ ] Backend summary API rejects cart because `confirmedQty` is null for one SKU.
-- [ ] Frontend does not show backend validation error and keeps user on cart page.
-- [ ] DB stock snapshot contains mixed case/piece quantity values causing mapper failure.
+- [x] Backend summary API rejects cart because `confirmedQty` is null for one SKU.
+- [x] Frontend does not show backend validation error and keeps user on cart page.
+- [x] DB stock snapshot contains mixed case/piece quantity values causing mapper failure.
 
 ### 12.4 Reproduction Steps
 
-- [~] Generate clear manual steps.
-- [~] Include outlet and SKU details for sample incident.
-- [~] Keep steps usable by QA.
+- [x] Generate clear manual steps.
+- [x] Include outlet and SKU details for sample incident.
+- [x] Keep steps usable by QA.
 
 Expected primary sample steps:
 
-- [ ] Login as Direct Orders user.
-- [ ] Select outlet `1000023`.
-- [ ] Add SKU `13321` and SKU `14498` to cart.
-- [ ] Click "Proceed to Summary."
-- [ ] Observe that the app remains on cart page and order summary is not opened.
+- [x] Login as Direct Orders user.
+- [x] Select outlet `1000023`.
+- [x] Add SKU `13321` and SKU `14498` to cart.
+- [x] Click "Proceed to Summary."
+- [x] Observe that the app remains on cart page and order summary is not opened.
 
 ### 12.5 SQL Checks
 
-- [~] Generate SQL validation queries.
-- [~] Include table and field assumptions.
+- [x] Generate SQL validation queries.
+- [x] Include table and field assumptions.
 - [x] Avoid destructive SQL.
 
 Expected primary sample query:
@@ -1161,24 +1161,24 @@ AND sku_code IN ('13321', '14498');
 
 ### 12.6 API Regression Tests
 
-- [~] Generate a Karate-style test.
-- [~] Generate Postman assertions.
-- [~] Include expected status and response shape.
-- [~] Include edge cases around null quantity fields.
+- [x] Generate a Karate-style test.
+- [x] Generate Postman assertions.
+- [x] Include expected status and response shape.
+- [x] Include edge cases around null quantity fields.
 
 Expected primary sample test intent:
 
-- [ ] Cart summary should return `200` when valid SKUs are present.
-- [ ] `response.orderSummary` should not be null.
-- [ ] `response.items[*].confirmedQty` should contain numbers.
+- [x] Cart summary should return `200` when valid SKUs are present.
+- [x] `response.orderSummary` should not be null.
+- [x] `response.items[*].confirmedQty` should contain numbers.
 
 ### 12.7 Jira-Ready Bug
 
 - [x] Generate title.
-- [~] Generate business impact.
-- [~] Generate expected result.
-- [~] Generate actual result.
-- [~] Generate evidence summary.
+- [x] Generate business impact.
+- [x] Generate expected result.
+- [x] Generate actual result.
+- [x] Generate evidence summary.
 - [x] Generate severity.
 
 Expected primary sample title:
@@ -1187,17 +1187,17 @@ Expected primary sample title:
 
 ### 12.8 Release Decision
 
-- [~] Generate PASS/WARN/BLOCK.
-- [~] Include risk score.
-- [~] Include reason.
-- [~] Include must-fix items.
-- [~] Include recommended tests.
+- [x] Generate PASS/WARN/BLOCK.
+- [x] Include risk score.
+- [x] Include reason.
+- [x] Include must-fix items.
+- [x] Include recommended tests.
 
 Expected primary sample decision:
 
-- [ ] `Release Gate: BLOCK`
-- [ ] Reason: core order placement journey is broken.
-- [ ] Required before release:
+- [x] `Release Gate: BLOCK`
+- [x] Reason: core order placement journey is broken.
+- [x] Required before release:
   - Fix confirmedQty mapper.
   - Add frontend error display.
   - Add regression test for cart-to-summary flow.
@@ -1213,6 +1213,13 @@ Verification note:
 - `npm test` now covers the primary sample's expected hypotheses, QA steps, API expectations, Jira title, release gate, and must-fix items through the production JSON parser/schema path.
 - `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed for this final-output contract slice. `npm run verify:local` reached the build step after passing typecheck/lint/tests, then Turbopack hit a sandbox-only port-binding panic; rerunning `npm run build` outside the sandbox passed.
 - The primary AI-generated RCA/test/release expected outputs are now live-verified through `/api/agents/run`: RCA identifies the removed `confirmedQty ?? 0` fallback, regression output is generated, and release gate is `BLOCK`.
+- Added `src/lib/quality/output-quality.ts` and a `Quality` result tab to evaluate completed incident packages against actionable summary, screenshot understanding, ranked evidence-backed hypotheses, QA reproduction steps, non-destructive SQL, API response-shape tests, release decision, and primary sample alignment.
+- Added output quality gates to the markdown/PDF report export path.
+- Hardened the explicit local demo output so regression steps include submitted outlet/SKUs and API expectations include `200`, `orderSummary`, and numeric `confirmedQty` assertions.
+- `npm test -- --test-name-pattern="incident report|output quality"` passed with 57 tests.
+- `npm test -- --test-name-pattern="local demo"` passed with 54 tests.
+- `npm run typecheck` and `npm run lint` passed after the output-quality and local-demo output slices.
+- Direct pixel-level Vision remains partial as noted in §8.4; the quality gate verifies that a completed Vision output is explicit, not that the provider accepted raw image transport.
 
 ---
 
