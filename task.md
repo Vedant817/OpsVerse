@@ -1362,42 +1362,42 @@ Verification note:
 
 Target script:
 
-- [ ] 0-5 sec: "Enterprise teams lose hours connecting screenshots, logs, API failures, and DB evidence during incidents."
-- [ ] 5-12 sec: "This is OpsVerse, a multimodal incident swarm powered by Gemma 4 on Cerebras."
-- [ ] 12-25 sec: "Upload a bug screenshot, logs, API response, and DB snapshot. The swarm launches Vision, Log, API, DB, RCA, Test, and Release agents."
-- [ ] 25-40 sec: "Within seconds, it identifies the broken cart-to-summary flow, finds the likely confirmedQty contract issue, and generates root cause hypotheses."
-- [ ] 40-52 sec: "It creates a Jira-ready bug, SQL checks, API regression tests, and a release gate decision."
-- [ ] 52-60 sec: "Cerebras speed makes this feel real-time: incident chaos becomes release-ready action before the meeting even starts."
+- [x] 0-5 sec: "Enterprise teams lose hours connecting screenshots, logs, API failures, and DB evidence during incidents."
+- [x] 5-12 sec: "This is OpsVerse, a multimodal incident swarm powered by Gemma 4 on Cerebras."
+- [x] 12-25 sec: "Upload a bug screenshot, logs, API response, and DB snapshot. The swarm launches Vision, Log, API, DB, RCA, Test, and Release agents."
+- [x] 25-40 sec: "Within seconds, it identifies the broken cart-to-summary flow, finds the likely confirmedQty contract issue, and generates root cause hypotheses."
+- [x] 40-52 sec: "It creates a Jira-ready bug, SQL checks, API regression tests, and a release gate decision."
+- [x] 52-60 sec: "Cerebras speed makes this feel real-time: incident chaos becomes release-ready action before the meeting even starts."
 
 ### 18.2 Shot List
 
-- [ ] Shot 1: Landing page.
-- [ ] Shot 2: Upload evidence.
-- [ ] Shot 3: Run swarm.
-- [ ] Shot 4: Results.
-- [ ] Shot 5: Speed metrics.
+- [x] Shot 1: Landing page.
+- [x] Shot 2: Upload evidence.
+- [x] Shot 3: Run swarm.
+- [x] Shot 4: Results.
+- [x] Shot 5: Speed metrics.
 
 ### 18.3 Track 1 Submission
 
-- [~] Prepare Discord post for `#g4hackathon-multiverse-agents`.
-- [~] Include project name.
-- [~] Include multi-agent and multimodal explanation.
-- [~] Include output package explanation.
+- [x] Prepare Discord post for `#g4hackathon-multiverse-agents`.
+- [x] Include project name.
+- [x] Include multi-agent and multimodal explanation.
+- [x] Include output package explanation.
 - [ ] Include demo link.
 - [ ] Include live app link.
 - [ ] Include GitHub link.
 
 ### 18.4 Track 3 Submission
 
-- [~] Prepare Discord post for `#g4hackathon-enterprise-impact`.
-- [~] Explain business impact:
+- [x] Prepare Discord post for `#g4hackathon-enterprise-impact`.
+- [x] Explain business impact:
   - Faster incident triage.
   - Better QA handoff.
   - Auto-generated regression tests.
   - Jira-ready bug reports.
   - Release gate decisions.
   - Reduced production risk.
-- [~] Explain production-readiness:
+- [x] Explain production-readiness:
   - Server-side API key handling.
   - Structured outputs.
   - Agent-level audit trail.
@@ -1411,6 +1411,8 @@ Verification note:
 - The tab provides copy actions for the combined submission kit, demo script, Track 1 post, and Track 3 post.
 - The tab explicitly says live app, GitHub, and demo video links must be added only after those artifacts are verified.
 - Demo recording and final submission links remain blocked until live model output, GitHub remote, Vercel deployment, and a recorded video exist.
+- Added `docs/demo-and-submission.md` with the 60-second script, shot list, Track 1 draft, Track 3 draft, optional X/Twitter draft, and final link checklist. It uses explicit verified-link placeholders and states that it is not proof of recording, deployment, or submission.
+- README now links to the runbook from the Demo Flow section.
 
 ### 18.5 Optional X/Twitter Post
 

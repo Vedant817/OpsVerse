@@ -197,6 +197,8 @@ Do not add a live URL to this README until the deployed app has been manually ve
 
 If the Cerebras model call fails, the UI displays failed agents and provider errors. If the configured model is unavailable, `/api/runtime/status` reports the provider's available model IDs and `/api/benchmark` returns HTTP `424`.
 
+The recording script, shot list, and submission drafts are in [`docs/demo-and-submission.md`](docs/demo-and-submission.md). That file intentionally uses verified-link placeholders until the live app, GitHub repository, and demo video exist.
+
 ## Security Notes
 
 - Do not commit `.env.local`.
