@@ -1242,8 +1242,8 @@ Only start these after the MVP is locally working and deployable.
 
 Acceptance criteria:
 
-- [ ] Stretch features must not break the primary demo flow.
-- [ ] Stretch features must not claim production integrations unless they are real.
+- [x] Stretch features must not break the primary demo flow.
+- [x] Stretch features must not claim production integrations unless they are real.
 
 Verification note:
 
@@ -1268,6 +1268,8 @@ Verification note:
 - Added an `Ask` result tab; unsupported questions return an explicit no-evidence answer instead of hallucinated incident details.
 - Added `tests/evidence-chat.test.ts` covering grounded root-cause answers, SQL answers, unsupported-question refusal, and exported supported prompts.
 - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed after the Ask tab slice. Build, audit, dev server, and browser smoke required unsandboxed execution because the managed sandbox blocks port binding/network/Chrome DevTools.
+- `npm run verify:ui` passed again for desktop and mobile `/` and `/incident` after all stretch tabs were present, confirming the primary demo pages still load without console/runtime errors or document-level horizontal overflow.
+- Verified stretch integration wording stays honest: the PR Diff tab says no GitHub API integration is claimed, the Runbook tab says it is not a live vector database, Gemini baseline comparison is opt-in and reports disabled or missing config until configured, and demo/submission docs keep verified-link placeholders until public links exist.
 
 ---
 
@@ -1332,7 +1334,7 @@ Acceptance criteria:
 
 - [ ] Live public URL works.
 - [ ] Primary sample incident can run end to end.
-- [~] No secrets appear in browser, logs, README, or commits.
+- [x] No secrets appear in browser, logs, README, or commits.
 
 Verification note:
 
@@ -1340,6 +1342,7 @@ Verification note:
 - Added `scripts/deployment-readiness.mjs` and `npm run verify:deployment`.
 - Added `npm run verify:local` to run typecheck, lint, tests, build, built-client/tracked secret scanning, and audit in one command.
 - Hardened `scripts/deployment-readiness.mjs` to include the documented `GEMINI_MODEL` baseline env key.
+- `npm run verify:secrets` passed with no tracked or built client secret patterns found.
 - Hardened `scripts/secret-scan.mjs` to scan `.next/static` browser assets when a production build exists, and moved `verify:secrets` after `build` in `npm run verify:local`.
 - `npm run verify:deployment` currently passes repo-local personal git identity, Vercel config, package scripts, `.env.example` coverage, Supabase schema tables, ignore rules, and tracked secret hygiene; it fails as expected because no git remote is configured and GitHub/Vercel CLIs are not installed in this environment.
 - Added `tests/deployment-readiness.test.ts` to exercise the deployment preflight in temporary git repositories. It verifies a complete fixture with personal git identity, remote, fake GitHub/Vercel CLIs, env placeholders, schema, and ignore rules passes; it also verifies missing remote and missing required CLIs fail closed.
