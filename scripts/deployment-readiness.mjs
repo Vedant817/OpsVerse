@@ -140,7 +140,19 @@ addCheck("Vercel CLI is installed", commandExists("vercel"), "required for local
 addCheck("vercel.json exists", existsSync(resolve(root, "vercel.json")));
 
 const packageJson = JSON.parse(readText("package.json"));
-for (const scriptName of ["typecheck", "lint", "build", "verify:local"]) {
+const requiredPackageScripts = [
+  "typecheck",
+  "lint",
+  "test",
+  "build",
+  "verify:secrets",
+  "verify:ui",
+  "verify:local",
+  "verify:deployment",
+  "verify:submission",
+];
+
+for (const scriptName of requiredPackageScripts) {
   addCheck(
     `package.json has ${scriptName} script`,
     Boolean(packageJson.scripts?.[scriptName]),

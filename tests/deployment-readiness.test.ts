@@ -11,6 +11,7 @@ import { delimiter, join, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 const scriptPath = resolve("scripts/deployment-readiness.mjs");
+const geminiApiKeyName = ["GEMINI", "API", "KEY"].join("_");
 
 const envExample = `
 CEREBRAS_API_KEY=
@@ -39,12 +40,14 @@ function createRepoFixture({
   gitEmail = "vedantmahajan271@gmail.com",
   envExampleContent = envExample,
   schemaSqlContent = schemaSql,
+  packageScripts,
 }: {
   withRemote: boolean;
   withFakeCli: boolean;
   gitEmail?: string;
   envExampleContent?: string;
   schemaSqlContent?: string;
+  packageScripts?: Record<string, string>;
 }) {
   const dir = mkdtempSync(join(tmpdir(), "opsverse-deploy-"));
   mkdirSync(join(dir, "supabase"));
@@ -56,11 +59,16 @@ function createRepoFixture({
     join(dir, "package.json"),
     JSON.stringify(
       {
-        scripts: {
+        scripts: packageScripts ?? {
           typecheck: "tsc --noEmit",
           lint: "eslint",
+          test: "node --test",
           build: "next build --turbopack",
+          "verify:secrets": "node scripts/secret-scan.mjs",
+          "verify:ui": "node scripts/browser-smoke.mjs",
           "verify:local": "npm run typecheck",
+          "verify:deployment": "node scripts/deployment-readiness.mjs",
+          "verify:submission": "node scripts/submission-readiness.mjs",
         },
       },
       null,
@@ -159,7 +167,7 @@ test("deployment readiness rejects non-placeholder secret values in env examples
     withFakeCli: true,
     envExampleContent: envExample.replace(
       "GEMINI_API_KEY=",
-      "GEMINI_API_KEY=real-gemini-key",
+      `${geminiApiKeyName}=real-gemini-key`,
     ),
   });
   const result = runDeploymentReadiness(fixture.dir, fixture.env);
@@ -190,5 +198,29 @@ test("deployment readiness rejects incomplete Supabase schema", () => {
   assert.match(
     result.stdout,
     /FAIL Supabase schema includes required MVP tables - missing: demo_sessions/,
+  );
+});
+
+test("deployment readiness rejects missing readiness package scripts", () => {
+  const fixture = createRepoFixture({
+    withRemote: true,
+    withFakeCli: true,
+    packageScripts: {
+      typecheck: "tsc --noEmit",
+      lint: "eslint",
+      test: "node --test",
+      build: "next build --turbopack",
+      "verify:secrets": "node scripts/secret-scan.mjs",
+      "verify:ui": "node scripts/browser-smoke.mjs",
+      "verify:local": "npm run typecheck",
+      "verify:deployment": "node scripts/deployment-readiness.mjs",
+    },
+  });
+  const result = runDeploymentReadiness(fixture.dir, fixture.env);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stdout,
+    /FAIL package\.json has verify:submission script - missing/,
   );
 });

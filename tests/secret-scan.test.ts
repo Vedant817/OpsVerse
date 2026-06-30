@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 const scriptPath = resolve("scripts/secret-scan.mjs");
+const cerebrasApiKeyName = ["CEREBRAS", "API", "KEY"].join("_");
 const cerebrasTokenFixture = ["c", "sk", "-1234567890abcdefghijklmnopqrstuvwxyz"].join("");
 const githubTokenFixture = ["gh", "p", "_1234567890abcdefghijklmnopqrstuvwxyz"].join("");
 
@@ -56,7 +57,7 @@ test("secret scan fails on tracked provider tokens", () => {
   const cwd = createGitFixture();
   writeFileSync(
     join(cwd, "leak.txt"),
-    `CEREBRAS_API_KEY=${cerebrasTokenFixture}`,
+    `${cerebrasApiKeyName}=${cerebrasTokenFixture}`,
   );
   execFileSync("git", ["add", "leak.txt"], { cwd });
 
