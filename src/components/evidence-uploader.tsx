@@ -133,6 +133,39 @@ type RuntimeStatus = {
   };
 };
 
+type RuntimePreflight = {
+  ok: boolean;
+  generated_at: string;
+  mode: "live_cerebras" | "local_demo";
+  summary: {
+    can_run_primary_sample: boolean;
+    ready_for_live_ai: boolean;
+    local_demo_enabled: boolean;
+    persistence_configured: boolean;
+    sample_count: number;
+    checks: {
+      pass: number;
+      warn: number;
+      block: number;
+    };
+  };
+  checks: Array<{
+    id: string;
+    label: string;
+    status: "pass" | "warn" | "block";
+    detail: string;
+  }>;
+  samples: Array<{
+    id: string;
+    label: string;
+    module: string;
+    ready: boolean;
+    evidence_count: number;
+    missing: string[];
+    signals: string[];
+  }>;
+};
+
 const emptyForm: EvidenceFormState = {
   title: "",
   module: "",
@@ -485,6 +518,8 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [streamStatus, setStreamStatus] = useState("");
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null);
   const [runtimeStatusError, setRuntimeStatusError] = useState("");
+  const [runtimePreflight, setRuntimePreflight] = useState<RuntimePreflight | null>(null);
+  const [runtimePreflightError, setRuntimePreflightError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const filledEvidenceCount = useMemo(
@@ -523,7 +558,29 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
       }
     }
 
+    async function loadRuntimePreflight() {
+      try {
+        const response = await fetch("/api/runtime/preflight", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as RuntimePreflight;
+
+        setRuntimePreflight(payload);
+        setRuntimePreflightError("");
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRuntimePreflightError(
+          error instanceof Error ? error.message : "Runtime preflight unavailable.",
+        );
+      }
+    }
+
     void loadRuntimeStatus();
+    void loadRuntimePreflight();
 
     return () => controller.abort();
   }, []);
@@ -940,6 +997,10 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
             status={runtimeStatus}
             error={runtimeStatusError}
           />
+          <RuntimePreflightPanel
+            preflight={runtimePreflight}
+            error={runtimePreflightError}
+          />
         </aside>
 
         <div className="space-y-6">
@@ -1318,6 +1379,126 @@ function RuntimeStatusRow({
         )}
       </div>
       <p className="mt-1 truncate font-mono">{detail}</p>
+    </div>
+  );
+}
+
+function RuntimePreflightPanel({
+  preflight,
+  error,
+}: {
+  preflight: RuntimePreflight | null;
+  error: string;
+}) {
+  const primarySample = preflight?.samples.find(
+    (sample) => sample.id === "cart-summary-failure",
+  );
+
+  return (
+    <div className="rounded border border-[#d6d1bf] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase text-[#555044]">
+          Demo Preflight
+        </h2>
+        <ClipboardCheck size={17} className="text-[#116d6e]" aria-hidden="true" />
+      </div>
+
+      {error ? (
+        <div className="rounded border border-[#f0b89d] bg-[#fff4ed] p-3 text-xs leading-5 text-[#9a3412]">
+          {error}
+        </div>
+      ) : null}
+
+      {!preflight && !error ? (
+        <div className="flex items-center gap-2 rounded border border-[#d6d1bf] bg-[#fbfaf5] p-3 text-xs text-[#625d52]">
+          <Loader2 className="animate-spin" size={15} aria-hidden="true" />
+          Checking demo readiness
+        </div>
+      ) : null}
+
+      {preflight ? (
+        <div className="grid gap-3 text-xs">
+          <RuntimeStatusRow
+            label="Primary sample"
+            configured={preflight.summary.can_run_primary_sample}
+            detail={
+              preflight.summary.can_run_primary_sample
+                ? `${preflight.mode === "local_demo" ? "local demo" : "live"} path can run`
+                : "blocked until live AI or explicit local demo mode is ready"
+            }
+          />
+          <RuntimeStatusRow
+            label="Sample pack"
+            configured={preflight.samples.every((sample) => sample.ready)}
+            detail={`${preflight.summary.sample_count} samples; ${
+              primarySample?.signals.length ?? 0
+            } primary signals`}
+          />
+          <RuntimeStatusRow
+            label="Live AI"
+            configured={preflight.summary.ready_for_live_ai}
+            neutral={
+              !preflight.summary.ready_for_live_ai &&
+              preflight.summary.local_demo_enabled
+            }
+            detail={
+              preflight.summary.ready_for_live_ai
+                ? "Gemma model ready"
+                : preflight.summary.local_demo_enabled
+                  ? "local demo mode is covering local run only"
+                  : "blocked"
+            }
+          />
+          <RuntimeStatusRow
+            label="Persistence"
+            configured={preflight.summary.persistence_configured}
+            neutral={!preflight.summary.persistence_configured}
+            detail={
+              preflight.summary.persistence_configured
+                ? "configured; still verify live insert/select"
+                : "not configured; dashboard refresh not durable"
+            }
+          />
+
+          {preflight.summary.checks.block > 0 ? (
+            <div className="rounded border border-[#f0b89d] bg-[#fff4ed] p-3 text-[#9a3412]">
+              <p className="font-semibold">
+                {preflight.summary.checks.block} blocker
+                {preflight.summary.checks.block === 1 ? "" : "s"}
+              </p>
+              <ul className="mt-2 grid gap-2">
+                {preflight.checks
+                  .filter((check) => check.status === "block")
+                  .map((check) => (
+                    <li key={check.id}>
+                      <span className="font-semibold">{check.label}:</span>{" "}
+                      {check.detail}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {preflight.summary.checks.warn > 0 ? (
+            <div className="rounded border border-[#ead18f] bg-[#fff9e6] p-3 text-[#725300]">
+              <p className="font-semibold">
+                {preflight.summary.checks.warn} warning
+                {preflight.summary.checks.warn === 1 ? "" : "s"}
+              </p>
+              <ul className="mt-2 grid gap-2">
+                {preflight.checks
+                  .filter((check) => check.status === "warn")
+                  .map((check) => (
+                    <li key={check.id}>
+                      <span className="font-semibold">{check.label}:</span>{" "}
+                      {check.detail}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
