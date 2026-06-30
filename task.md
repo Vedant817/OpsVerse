@@ -214,6 +214,8 @@ Verification note:
 - Schema is syntactically ready for Supabase/Postgres, but has not been applied against a live Supabase project in this environment.
 - Persistence behavior is implemented in server code and build-verified; live insert/select verification is blocked until valid Supabase env values are supplied.
 - `tests/dashboard-record.test.ts` verifies that saved Supabase-style rows reconstruct incident evidence, screenshot data, video frame arrays, completed agent outputs, failed agent rows, and metrics for dashboard refresh.
+- Added `scripts/supabase-persistence-check.ts` and `npm run verify:supabase`. The command writes one synthetic verifier incident, stores evidence and agent-run rows, reloads the dashboard record, validates reconstructed outputs with output quality gates, and deletes only the verifier incident id when real Supabase env vars are configured. It fails closed when `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` is missing.
+- Added `tests/supabase-persistence-check.test.ts` covering fixture success, missing saved agent runs, and missing live Supabase env behavior. Fixture tests passed locally, but the live Supabase check has not been run because valid Supabase env values are not configured in this environment.
 
 ### 4.2 Database Client and Queries
 
@@ -242,6 +244,7 @@ Verification note:
 - `npm run typecheck` and `npm run lint` passed after the DB layer was added.
 - API smoke checks on `127.0.0.1:3000` confirmed invalid incident JSON returns HTTP 400, invalid evidence returns HTTP 400, and valid sample incident creation returns HTTP 503 with missing Supabase env fields when persistence is not configured.
 - `npm test` verifies saved row reconstruction preserves latest evidence rows, screenshot data URIs, frame arrays, completed outputs, failed runs, token metrics, and `time_info`; live Supabase insert/select refresh remains blocked until valid Supabase env values are configured.
+- `npm run verify:supabase` is now the live acceptance gate for dashboard refresh persistence. It should be run after applying `supabase/schema.sql` and exporting `NEXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY`.
 
 ---
 
@@ -1506,12 +1509,14 @@ npm run verify:secrets
 npm run verify:ui
 npm run verify:preflight
 npm run verify:primary-sample
+npm run verify:supabase
 ```
 
 If the project uses pnpm, replace `npm` with `pnpm`.
 `npm run verify:ui` requires a running local app, for example `npm run dev -- --hostname 127.0.0.1 --port 3000`.
 `npm run verify:preflight` also requires a running local app and calls `/api/runtime/preflight`.
 `npm run verify:primary-sample` requires a running local app and calls `/api/agents/run` with the bundled primary sample.
+`npm run verify:supabase` requires real Supabase env vars in the shell and writes/deletes one synthetic verifier incident.
 
 Verification note:
 
@@ -1521,9 +1526,10 @@ Verification note:
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
 - Added `npm run verify:preflight` for repeatable primary-demo readiness checks against `/api/runtime/preflight`.
 - Added `npm run verify:primary-sample` for repeatable full primary-sample route verification against `/api/agents/run`.
+- Added `npm run verify:supabase` for fail-closed live Supabase insert/select/dashboard reconstruction verification.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
-- `npm test` currently passes with 49 tests.
+- `npm test` currently passes with 63 tests.
 - `npm run verify:local` previously passed after the test slice. After the final-output contract slice it passed typecheck, lint, and tests, then Turbopack hit a sandbox-only port-binding panic during build; the same `npm run build` command passed outside the sandbox, and `npm run verify:secrets` plus `npm audit --audit-level=moderate` passed afterward.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
@@ -1531,6 +1537,9 @@ Verification note:
 - `npm run verify:primary-sample` passed against a local dev server in live Cerebras mode. It called `/api/agents/run`, completed 9 agents, validated all required outputs, found 0 output-quality blockers, found provider metrics on 9 runs, and verified release gate `BLOCK`. The run took about 117 seconds.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `npm run verify:ui` passed against `http://127.0.0.1:3003`, and HTTP checks verified the primary sample plus both additional samples complete through the local demo route with no provider metrics.
 - With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP checks verified the primary sample completes through the live Gemma route with 9 complete metric-bearing runs, RCA, tests, narrator output, and release gate `BLOCK`.
+- `node --import tsx --test tests/supabase-persistence-check.test.ts` passed with 3 tests, proving the Supabase verifier validates complete saved dashboard records and fails closed for missing agent rows or missing live Supabase env.
+- After adding the Supabase verifier, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed.
+- `npm run verify:supabase` currently returns nonzero as expected because live Supabase env values are not configured; the failure message names `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
 - Quality gates are still blocked from full `[x]` because direct Vision image transport is still partial, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
 

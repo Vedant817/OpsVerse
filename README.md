@@ -145,6 +145,7 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 npm run verify:ui
 npm run verify:preflight
 npm run verify:primary-sample
+npm run verify:supabase
 ```
 
 The UI check uses local Chrome through the Chrome DevTools Protocol. It verifies `/` and `/incident` at desktop and mobile widths, checks required visible copy, fails on console/runtime errors, and fails on document-level horizontal overflow.
@@ -152,6 +153,8 @@ The UI check uses local Chrome through the Chrome DevTools Protocol. It verifies
 `npm run verify:preflight` calls `/api/runtime/preflight` on the running app. It fails when the primary sample is not runnable, sample evidence no longer validates, or live AI is blocked without explicit local demo mode. Supabase persistence is reported as a warning until live insert/select refresh is configured and verified.
 
 `npm run verify:primary-sample` posts the bundled primary sample to `/api/agents/run`, validates the returned final incident package, requires completed agent outputs, applies the output quality gates, and requires live Cerebras mode unless `PRIMARY_SAMPLE_ALLOW_LOCAL_DEMO=true` is explicitly set for local-demo-only verification.
+
+`npm run verify:supabase` performs a live Supabase insert/select/delete round trip when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in the shell. It writes one synthetic verifier incident, stores evidence and agent-run rows, reloads them through the dashboard reconstruction path, applies output quality gates, then deletes only that verifier incident id. It fails closed when Supabase env vars are missing.
 
 Useful API smoke checks:
 
@@ -172,6 +175,14 @@ Apply `supabase/schema.sql` to a Supabase project, then set:
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 `SUPABASE_SERVICE_ROLE_KEY` is used only from server-only modules. If Supabase is missing, incident creation returns HTTP `503` and the dashboard shows a visible configuration error instead of pretending persistence worked.
+
+After applying the schema and exporting the Supabase environment variables, run:
+
+```bash
+npm run verify:supabase
+```
+
+This command is the live persistence proof for dashboard refresh behavior. It does not prove live Cerebras execution; it uses synthetic verifier evidence and evidence-derived local agent output only to validate persistence, reload, schema compatibility, and cleanup.
 
 ## Deployment Readiness
 
@@ -239,7 +250,7 @@ This check is expected to fail until the demo video, Vercel production URL, and 
 - Live `gemma-4-31b` benchmark connectivity is verified through `/api/benchmark`, including latency, token usage, and `time_info`.
 - The primary live swarm completes through `/api/agents/run` with 9 metric-bearing Gemma runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - Direct Vision image transport is still partial in this environment: the tiny PNG probe receives provider HTTP `400`. OpsVerse falls back to a real Gemma call over submitted visual notes and labels that output as note-based, not direct pixel analysis.
-- Supabase persistence is implemented but live insert/select refresh is not verified until valid Supabase environment variables are configured.
+- Supabase persistence code and a fail-closed live verifier are implemented, but live insert/select refresh is not marked complete until `npm run verify:supabase` is run with valid Supabase environment variables.
 - Deployment, demo video, live app link, and submission links are intentionally absent until verified.
 
 ## Future Scope

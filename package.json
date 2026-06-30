@@ -15,6 +15,7 @@
     "verify:deployment": "node scripts/deployment-readiness.mjs",
     "verify:submission": "node scripts/submission-readiness.mjs",
     "verify:preflight": "node scripts/runtime-preflight-check.mjs",
+    "verify:supabase": "node --import tsx scripts/supabase-persistence-check.ts",
     "verify:primary-sample": "node --import tsx scripts/primary-sample-check.ts"
   },
   "dependencies": {
