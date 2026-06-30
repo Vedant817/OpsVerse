@@ -199,6 +199,14 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 
 The recording script, shot list, and submission drafts are in [`docs/demo-and-submission.md`](docs/demo-and-submission.md). That file intentionally uses verified-link placeholders until the live app, GitHub repository, and demo video exist.
 
+Before posting the final submission, run:
+
+```bash
+npm run verify:submission
+```
+
+This check is expected to fail until the demo video, Vercel production URL, and GitHub repository placeholders in the runbook are replaced with verified public links.
+
 ## Security Notes
 
 - Do not commit `.env.local`.

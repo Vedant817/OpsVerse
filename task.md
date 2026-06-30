@@ -1413,6 +1413,9 @@ Verification note:
 - Demo recording and final submission links remain blocked until live model output, GitHub remote, Vercel deployment, and a recorded video exist.
 - Added `docs/demo-and-submission.md` with the 60-second script, shot list, Track 1 draft, Track 3 draft, optional X/Twitter draft, and final link checklist. It uses explicit verified-link placeholders and states that it is not proof of recording, deployment, or submission.
 - README now links to the runbook from the Demo Flow section.
+- Added `scripts/submission-readiness.mjs` and `npm run verify:submission` as a fail-closed final submission gate. It validates the runbook sections and link labels, rejects local-only URLs and premature external-completion claims, and fails while verified demo/live/GitHub placeholders remain.
+- `npm run verify:submission` currently passes runbook existence, required sections, required link labels, no premature completion claims, and no local-only URLs; it fails as expected because `<verified demo video link>`, `<verified Vercel production link>`, and `<verified GitHub repository link>` remain unresolved.
+- `npm run lint`, `npm run typecheck`, and `npm run verify:secrets` passed after adding the submission readiness gate.
 
 ### 18.5 Optional X/Twitter Post
 
