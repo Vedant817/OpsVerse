@@ -47,6 +47,11 @@ export function Hero({
               regression tests, and release-risk decision using a swarm of Gemma
               4 agents running on Cerebras.
             </p>
+            <p className="max-w-3xl text-base leading-7 text-[#c9c6ba]">
+              Upload a screenshot, logs, API response, and DB snapshot. Gemma 4
+              agents on Cerebras turn chaos into RCA, tests, and release
+              decisions in seconds.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3">

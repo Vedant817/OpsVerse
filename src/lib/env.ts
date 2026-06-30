@@ -69,7 +69,7 @@ export type LocalAgentModeEnv = z.infer<typeof localAgentModeEnvSchema> & {
 };
 
 const cerebrasAgentConcurrencyEnvSchema = z.object({
-  CEREBRAS_AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(1),
+  CEREBRAS_AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(4),
 });
 
 export type CerebrasAgentConcurrencyEnv = z.infer<

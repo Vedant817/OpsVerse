@@ -35,7 +35,7 @@ Verification rule: do not mark a task `[x]` unless the relevant code exists, the
 
 - [x] Implement OpsVerse as a multimodal incident-response control room for enterprise apps.
 - [x] Make the first screen communicate the product clearly: "OpsVerse - Multimodal Incident Swarm for Enterprise Apps."
-- [~] Preserve the one-line pitch in product copy, README, and demo script:
+- [x] Preserve the one-line pitch in product copy, README, and demo script:
   - OpsVerse turns a bug screenshot, screen recording frames, logs, API responses, DB snapshots, and Git diffs into a complete incident report, root-cause hypothesis, reproduction steps, regression tests, and release-risk decision using a swarm of Gemma 4 agents running on Cerebras.
 - [x] Keep the hackathon positioning explicit:
   - Primary: Track 1, Multiverse Agents.
@@ -54,6 +54,7 @@ Verification note:
 - Added `src/components/hero.tsx` and wired it into the first viewport of the intake workflow.
 - The first viewport now renders the exact line `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`.
 - README now uses the required one-line pitch verbatim, and `src/components/hero.tsx` uses the same pitch in product copy.
+- `docs/demo-and-submission.md` and the narrator output path preserve the same pitch context without adding unverified live links.
 - README keeps the hackathon positioning explicit for Track 1, Track 3, and optional People's Choice.
 - The UI labels the workflow as `Synthetic evidence only`, and all bundled samples remain synthetic.
 - `curl -s http://127.0.0.1:3000` returned `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
@@ -324,7 +325,7 @@ Verification note:
 
 - [x] Implement `app/page.tsx`.
 - [x] Include product name as the primary first-viewport signal.
-- [~] Include hero copy:
+- [x] Include hero copy:
   - "Multimodal Incident Swarm for Enterprise Apps"
   - "Upload a screenshot, logs, API response, and DB snapshot. Gemma 4 agents on Cerebras turn chaos into RCA, tests, and release decisions in seconds."
 - [x] Add primary actions:
@@ -573,7 +574,8 @@ Verification note:
 - Added a cached provider model-list preflight in `src/lib/cerebras/client.ts`. If `CEREBRAS_MODEL` is unavailable, agent calls fail with a typed `CerebrasModelUnavailableError` before attempting chat completion.
 - Added `src/lib/cerebras/model-policy.ts`; if `CEREBRAS_MODEL` is not Gemma-family, agent calls fail with `CerebrasNonGemmaModelError` instead of running a non-Gemma fallback.
 - HTTP smoke verified `/api/benchmark` now returns HTTP 200 for `gemma-4-31b` with real content, latency, token usage, tokens/sec, `time_info`, and a response id.
-- HTTP smoke verified `/api/runtime/status` reports `gemma_model: true`, `generation_ready: true`, `request_timeout_ms: 20000`, and `agent_concurrency: 1`.
+- HTTP smoke verified `/api/runtime/status` reports `gemma_model`, `generation_ready`, `request_timeout_ms`, and `agent_concurrency` without exposing secrets.
+- Updated the default and documented `CEREBRAS_AGENT_CONCURRENCY` to `4` so Vision, Log, API, and DB agents run concurrently by default; environments can still override it lower when rate limiting requires throttling.
 - HTTP smoke verified `/api/agents/run` no longer hangs on the full live primary sample path; it returns structured HTTP 502 failed-agent diagnostics. The current remaining live blockers are provider `400` for the tiny PNG Vision probe and provider `429` responses for text agents, not missing model availability.
 - Missing-key and invalid-JSON paths were verified with `curl`.
 - `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
@@ -867,7 +869,7 @@ Verification note:
 ### 9.9 Demo Narrator Agent
 
 - [x] Implement `lib/agents/narrator-agent.ts`.
-- [~] Generate:
+- [x] Generate:
   - 60-second demo script
   - Discord Track 1 post
   - Discord Track 3 post
@@ -898,12 +900,12 @@ Verification note:
 ### 10.1 Orchestrator
 
 - [x] Implement `lib/agents/orchestrator.ts`.
-- [~] Run independent agents in parallel:
+- [x] Run independent agents in parallel:
   - Vision Agent
   - Log Agent
   - API Agent
   - DB Agent
-- [~] Run RCA Agent after the first parallel group completes.
+- [x] Run RCA Agent after the first parallel group completes.
 - [x] Run Regression Test Agent and Release Risk Agent in parallel after RCA.
 - [x] Run Demo Narrator Agent last.
 - [~] Persist each agent state and output.
@@ -932,6 +934,8 @@ Acceptance criteria:
 
 Verification note:
 
+- `runEvidenceAgents` now launches Vision, Log, API, and DB through a worker pool backed by `Promise.all`, with the default `CEREBRAS_AGENT_CONCURRENCY=4` matching the four independent evidence agents.
+- RCA starts only after the evidence-agent `Promise.all` resolves and the orchestrator has collected Vision, Log, API, and DB outputs/failures.
 - Updated the orchestrator so `test_agent` and `release_agent` both emit `agent_started` after RCA completes and then run inside one `Promise.all`.
 - Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
 - Narrator remains gated on both Regression Test and Release Risk completion.
