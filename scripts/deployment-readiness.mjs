@@ -16,6 +16,7 @@ const requiredEnvKeys = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "BASELINE_PROVIDER_ENABLED",
   "GEMINI_API_KEY",
+  "GEMINI_MODEL",
 ];
 
 const requiredTables = [

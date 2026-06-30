@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 const secretPatterns = [
   {
@@ -44,25 +45,52 @@ function lineNumberFor(content, index) {
 
 const findings = [];
 
-for (const file of trackedFiles()) {
+function scanFile(file, label = file) {
   let content;
 
   try {
     content = readFileSync(file, "utf8");
   } catch {
-    continue;
+    return;
   }
 
   for (const { name, pattern } of secretPatterns) {
     pattern.lastIndex = 0;
     for (const match of content.matchAll(pattern)) {
       findings.push({
-        file,
+        file: label,
         line: lineNumberFor(content, match.index ?? 0),
         name,
       });
     }
   }
+}
+
+function listStaticFiles(dir) {
+  if (!existsSync(dir)) {
+    return [];
+  }
+
+  const files = [];
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      files.push(...listStaticFiles(path));
+    } else if (/\.(js|css|html|json|txt|map)$/.test(path)) {
+      files.push(path);
+    }
+  }
+
+  return files;
+}
+
+for (const file of trackedFiles()) {
+  scanFile(file);
+}
+
+for (const file of listStaticFiles(".next/static")) {
+  scanFile(file, file);
 }
 
 if (findings.length > 0) {
@@ -73,4 +101,4 @@ if (findings.length > 0) {
   process.exit(1);
 }
 
-console.log("Secret scan passed: no tracked secret patterns found.");
+console.log("Secret scan passed: no tracked or built client secret patterns found.");

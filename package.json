@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "verify:secrets": "node scripts/secret-scan.mjs",
     "verify:ui": "node scripts/browser-smoke.mjs",
-    "verify:local": "npm run typecheck && npm run lint && npm test && npm run verify:secrets && npm run build && npm audit --audit-level=moderate",
+    "verify:local": "npm run typecheck && npm run lint && npm test && npm run build && npm run verify:secrets && npm audit --audit-level=moderate",
     "verify:deployment": "node scripts/deployment-readiness.mjs"
   },
   "dependencies": {

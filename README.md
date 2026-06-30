@@ -124,8 +124,8 @@ Equivalent individual checks:
 npm run typecheck
 npm run lint
 npm test
-npm run verify:secrets
 npm run build
+npm run verify:secrets
 npm audit --audit-level=moderate
 ```
 

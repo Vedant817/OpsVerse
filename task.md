@@ -1333,8 +1333,10 @@ Verification note:
 
 - Added `vercel.json` with `npm install`, `npm run build`, and `npm run dev` commands for Vercel project configuration.
 - Added `scripts/deployment-readiness.mjs` and `npm run verify:deployment`.
-- Added `npm run verify:local` to run typecheck, lint, tests, tracked secret scanning, build, and audit in one command.
-- `npm run verify:deployment` now passes repo-local git identity, `vercel.json`, scripts, `.env.example`, Supabase schema, `.env.local` ignore, `.vercel` ignore, and tracked-secret checks. It fails on the three external prerequisites that are actually missing here: git remote, GitHub CLI, and Vercel CLI.
+- Added `npm run verify:local` to run typecheck, lint, tests, build, built-client/tracked secret scanning, and audit in one command.
+- Hardened `scripts/deployment-readiness.mjs` to include the documented `GEMINI_MODEL` baseline env key.
+- Hardened `scripts/secret-scan.mjs` to scan `.next/static` browser assets when a production build exists, and moved `verify:secrets` after `build` in `npm run verify:local`.
+- `npm run verify:deployment` currently passes repo-local personal git identity, Vercel config, package scripts, `.env.example` coverage, Supabase schema tables, ignore rules, and tracked secret hygiene; it fails as expected because no git remote is configured and GitHub/Vercel CLIs are not installed in this environment.
 - Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and the current Cerebras key does not list the configured `gemma-4-31b` model.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
