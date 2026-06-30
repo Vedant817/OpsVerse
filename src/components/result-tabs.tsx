@@ -127,7 +127,7 @@ export function ResultTabs({ result }: ResultTabsProps) {
   const reportSlug = incidentReportSlug(result);
   const karateTest = result.outputs.tests?.karate_test ?? "";
   const releaseText = result.outputs.release
-    ? `Release Gate: ${result.outputs.release.release_gate}\nRisk Score: ${result.outputs.release.risk_score}\nReason: ${result.outputs.release.reason}\nMust Fix:\n${result.outputs.release.must_fix_before_release.join("\n")}`
+    ? `Release Gate: ${result.outputs.release.release_gate}\nRisk Score: ${result.outputs.release.risk_score}\nReason: ${result.outputs.release.reason}\nMust Fix:\n${result.outputs.release.must_fix_before_release.join("\n")}\nRecommended Tests:\n${result.outputs.release.recommended_tests.join("\n")}`
     : "Release gate output unavailable.";
 
   function onCopied(label: string) {
@@ -197,6 +197,18 @@ export function ResultTabs({ result }: ResultTabsProps) {
                     : "n/a"
                 }
               />
+              <SummaryMetric
+                label="User Impact"
+                value={result.outputs.rca?.user_impact ?? "Pending RCA output"}
+              />
+              <SummaryMetric
+                label="Likely Owner"
+                value={result.outputs.rca?.likely_owner ?? "Pending RCA output"}
+              />
+              <SummaryMetric
+                label="Release Gate"
+                value={result.outputs.release?.release_gate ?? "Pending"}
+              />
             </div>
             <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-4">
               <h3 className="text-sm font-semibold">Incident Summary</h3>
@@ -215,10 +227,10 @@ export function ResultTabs({ result }: ResultTabsProps) {
               <TextBlock value={result.outputs.rca.root_cause_summary} />
               <ListBlock
                 title="Hypotheses"
-                items={result.outputs.rca.hypotheses.map(
-                  (item) =>
-                    `${Math.round(item.confidence * 100)}% - ${item.hypothesis}`,
-                )}
+                items={result.outputs.rca.hypotheses.map((item) => {
+                  const confidence = Math.round(item.confidence * 100);
+                  return `${confidence}% - ${item.hypothesis} Evidence: ${item.supporting_evidence.join("; ")}`;
+                })}
               />
               <ListBlock
                 title="Missing Evidence"
@@ -284,6 +296,12 @@ export function ResultTabs({ result }: ResultTabsProps) {
               <ListBlock
                 title="Manual QA Steps"
                 items={result.outputs.tests.manual_qa_steps}
+              />
+              <ListBlock
+                title="API Expectations"
+                items={result.outputs.tests.api_expectations.map(
+                  (item) => `${item.behavior} - ${item.assertion}`,
+                )}
               />
               <ListBlock title="SQL Validation" items={sqlChecks} />
               <TextBlock value={result.outputs.tests.karate_test} />

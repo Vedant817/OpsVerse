@@ -87,6 +87,8 @@ const outputs = {
   rca: {
     root_cause_summary:
       "Cart summary rejects the cart because confirmedQty is null for SKU 13321.",
+    user_impact: "Blocks order placement",
+    likely_owner: "Backend validation + frontend error handling",
     confidence: 0.88,
     evidence_links: ["api.items[0].confirmedQty", "logs.req-8f32"],
     hypotheses: [
@@ -118,6 +120,20 @@ const outputs = {
     ],
     sql_validation: [
       "SELECT sku_code, confirmed_qty FROM ck_stock WHERE outlet_code = '1000023';",
+    ],
+    api_expectations: [
+      {
+        behavior: "Cart summary should return 200 when valid SKUs are present",
+        assertion: "response.status === 200",
+      },
+      {
+        behavior: "response.orderSummary should not be null",
+        assertion: "response.orderSummary != null",
+      },
+      {
+        behavior: "response.items[*].confirmedQty should contain numbers",
+        assertion: "every confirmedQty is a number",
+      },
     ],
     api_regression_test:
       "POST /api/cart/summary should return 200 when confirmedQty is numeric.",
@@ -175,6 +191,14 @@ test("representative agent outputs validate against production schemas", () => {
     "ck_stock",
   ]);
   assert.equal(rcaOutputSchema.parse(outputs.rca).hypotheses.length, 3);
+  assert.equal(
+    rcaOutputSchema.parse(outputs.rca).likely_owner,
+    "Backend validation + frontend error handling",
+  );
+  assert.equal(
+    regressionTestOutputSchema.parse(outputs.tests).api_expectations.length,
+    3,
+  );
   assert.match(
     regressionTestOutputSchema.parse(outputs.tests).karate_test,
     /Then status 200/,

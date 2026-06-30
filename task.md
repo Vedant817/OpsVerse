@@ -1148,7 +1148,7 @@ Expected primary sample test intent:
 
 Expected primary sample title:
 
-- [ ] "Unable to move from cart to order summary in Direct Orders app"
+- [x] "Unable to move from cart to order summary in Direct Orders app"
 
 ### 12.8 Release Decision
 
@@ -1173,6 +1173,11 @@ Verification note:
 - Added a Submission tab for Demo Narrator output. It renders an unavailable state until the narrator agent actually completes, so static demo/submission copy is not shown as generated output.
 - Jira output is generated from actual incident package data and explicitly says when agent-derived fields are pending.
 - Release output renders only completed release-agent data; otherwise it shows an unavailable state instead of inventing a PASS/WARN/BLOCK decision.
+- Hardened the final-output schemas and prompts so completed RCA output must include `user_impact`, `likely_owner`, at least three evidence-backed hypotheses, completed regression-test output must include explicit API expectations, and release output must include non-empty must-fix and recommended-test lists.
+- Updated Summary, Root Cause, Tests, Jira Bug, Release Gate, markdown export, and PDF export surfaces to render these structured fields from the incident package instead of relying on loose prose.
+- `npm test` now covers the primary sample's expected hypotheses, QA steps, API expectations, Jira title, release gate, and must-fix items through the production JSON parser/schema path.
+- `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed for this final-output contract slice. `npm run verify:local` reached the build step after passing typecheck/lint/tests, then Turbopack hit a sandbox-only port-binding panic; rerunning `npm run build` outside the sandbox passed.
+- The primary AI-generated RCA/test/release expected outputs remain `[~]` because the current Cerebras key still does not list the configured `gemma-4-31b` model, so the live swarm cannot be honestly marked complete.
 
 ---
 

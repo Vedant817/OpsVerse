@@ -67,27 +67,35 @@ export const dbOutputSchema = z.object({
 });
 
 export const rootCauseHypothesisSchema = z.object({
-  hypothesis: z.string(),
+  hypothesis: z.string().trim().min(1),
   confidence: z.number().min(0).max(1),
-  supporting_evidence: z.array(z.string()),
+  supporting_evidence: z.array(z.string().trim().min(1)).min(1),
+});
+
+export const apiExpectationSchema = z.object({
+  behavior: z.string().trim().min(1),
+  assertion: z.string().trim().min(1),
 });
 
 export const rcaOutputSchema = z.object({
-  root_cause_summary: z.string(),
+  root_cause_summary: z.string().trim().min(1),
+  user_impact: z.string().trim().min(1),
+  likely_owner: z.string().trim().min(1),
   confidence: z.number().min(0).max(1),
-  evidence_links: z.array(z.string()),
-  hypotheses: z.array(rootCauseHypothesisSchema).min(1),
-  alternative_hypotheses: z.array(z.string()),
-  missing_evidence: z.array(z.string()),
+  evidence_links: z.array(z.string().trim().min(1)).min(1),
+  hypotheses: z.array(rootCauseHypothesisSchema).min(3),
+  alternative_hypotheses: z.array(z.string().trim().min(1)),
+  missing_evidence: z.array(z.string().trim().min(1)),
 });
 
 export const regressionTestOutputSchema = z.object({
-  manual_qa_steps: z.array(z.string()),
-  sql_validation: z.array(z.string()),
-  api_regression_test: z.string(),
-  postman_assertions: z.array(z.string()),
-  karate_test: z.string(),
-  edge_cases: z.array(z.string()),
+  manual_qa_steps: z.array(z.string().trim().min(1)).min(1),
+  sql_validation: z.array(z.string().trim().min(1)).min(1),
+  api_expectations: z.array(apiExpectationSchema).min(1),
+  api_regression_test: z.string().trim().min(1),
+  postman_assertions: z.array(z.string().trim().min(1)).min(1),
+  karate_test: z.string().trim().min(1),
+  edge_cases: z.array(z.string().trim().min(1)),
 });
 
 export const releaseRiskOutputSchema = z.object({
@@ -97,9 +105,9 @@ export const releaseRiskOutputSchema = z.object({
     z.literal("BLOCK"),
   ]),
   risk_score: z.number().min(0).max(100),
-  reason: z.string(),
-  must_fix_before_release: z.array(z.string()),
-  recommended_tests: z.array(z.string()),
+  reason: z.string().trim().min(1),
+  must_fix_before_release: z.array(z.string().trim().min(1)).min(1),
+  recommended_tests: z.array(z.string().trim().min(1)).min(1),
 });
 
 export const demoNarratorOutputSchema = z.object({

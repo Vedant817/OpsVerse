@@ -31,29 +31,49 @@ export function incidentReportSlug(result: FinalIncidentPackage) {
 export function buildJiraMarkdown(result: FinalIncidentPackage) {
   const { incident, outputs } = result;
   const impact =
+    outputs.rca?.user_impact ||
     outputs.api?.likely_impact ||
     outputs.rca?.root_cause_summary ||
     "Impact pending completed RCA output.";
+  const expectedBehaviors =
+    outputs.tests?.api_expectations.map(
+      (item) => `${item.behavior}: ${item.assertion}`,
+    ) ?? [];
   const actual =
-    outputs.api?.contract_violation ||
+    [
+      outputs.api
+        ? `${outputs.api.endpoint} returned ${outputs.api.status}: ${outputs.api.contract_violation}`
+        : "",
+      outputs.vision?.ui_state,
+    ]
+      .filter(Boolean)
+      .join(" | ") ||
     outputs.logs?.primary_error ||
     "Actual result pending completed agent output.";
   const expected =
+    expectedBehaviors.join(" | ") ||
     outputs.api?.suggested_fix ||
     "Expected result should be confirmed after RCA and regression agent output.";
   const evidence = [
+    outputs.rca?.hypotheses[0]?.hypothesis,
     outputs.logs?.probable_cause,
     outputs.api?.breaking_field,
     outputs.db?.data_issue,
   ].filter((item): item is string => Boolean(item));
+  const jiraTitle = `${incident.title}${
+    incident.module ? ` in ${incident.module} app` : ""
+  }`;
 
   return [
-    `# ${incident.title}`,
+    `# ${jiraTitle}`,
     "",
     "| Field | Value |",
     "| --- | --- |",
     `| Module | ${escapeMarkdownCell(incident.module)} |`,
     "| Severity | High |",
+    `| Likely owner | ${escapeMarkdownCell(
+      outputs.rca?.likely_owner ?? "Pending RCA output",
+    )} |`,
     `| Business impact | ${escapeMarkdownCell(impact)} |`,
     `| Expected result | ${escapeMarkdownCell(expected)} |`,
     `| Actual result | ${escapeMarkdownCell(actual)} |`,
@@ -92,6 +112,8 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
     "## Summary",
     "",
     `- Module: ${incident.module}`,
+    `- User impact: ${valueOrUnavailable(rca?.user_impact)}`,
+    `- Likely owner: ${valueOrUnavailable(rca?.likely_owner)}`,
     `- Confidence: ${
       typeof rca?.confidence === "number"
         ? `${Math.round(rca.confidence * 100)}%`
@@ -121,6 +143,14 @@ export function buildIncidentReportMarkdown(result: FinalIncidentPackage) {
     listOrUnavailable(tests?.sql_validation ?? outputs.db?.sql_checks),
     "",
     "### API Regression Test",
+    "",
+    "Expected API behaviors:",
+    "",
+    tests?.api_expectations && tests.api_expectations.length > 0
+      ? tests.api_expectations
+          .map((item) => `- ${item.behavior}: ${item.assertion}`)
+          .join("\n")
+      : `- ${unavailable}`,
     "",
     "```text",
     valueOrUnavailable(tests?.api_regression_test),

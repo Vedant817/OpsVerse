@@ -82,6 +82,8 @@ const incidentPackage: FinalIncidentPackage = finalIncidentPackageSchema.parse({
     rca: {
       root_cause_summary:
         "Cart summary rejects the cart because confirmedQty is null.",
+      user_impact: "Blocks order placement",
+      likely_owner: "Backend validation + frontend error handling",
       confidence: 0.88,
       evidence_links: ["api.items[0].confirmedQty"],
       hypotheses: [
@@ -90,14 +92,44 @@ const incidentPackage: FinalIncidentPackage = finalIncidentPackageSchema.parse({
           confidence: 0.88,
           supporting_evidence: ["API response reports null confirmedQty"],
         },
+        {
+          hypothesis: "Frontend does not show backend validation error",
+          confidence: 0.72,
+          supporting_evidence: ["Screenshot note reports no visible error"],
+        },
+        {
+          hypothesis: "DB stock snapshot contains mixed quantity values",
+          confidence: 0.63,
+          supporting_evidence: ["DB snapshot has blank confirmed_qty"],
+        },
       ],
       alternative_hypotheses: [],
       missing_evidence: [],
     },
     tests: {
-      manual_qa_steps: ["Click Proceed to Summary"],
+      manual_qa_steps: [
+        "Login as Direct Orders user",
+        "Select outlet 1000023",
+        "Add SKU 13321 and SKU 14498 to cart",
+        "Click Proceed to Summary",
+        "Observe that the app remains on cart page and order summary is not opened",
+      ],
       sql_validation: [
         "SELECT sku_code, confirmed_qty FROM ck_stock WHERE outlet_code = '1000023';",
+      ],
+      api_expectations: [
+        {
+          behavior: "Cart summary should return 200 when valid SKUs are present",
+          assertion: "response.status === 200",
+        },
+        {
+          behavior: "response.orderSummary should not be null",
+          assertion: "response.orderSummary != null",
+        },
+        {
+          behavior: "response.items[*].confirmedQty should contain numbers",
+          assertion: "every confirmedQty is a number",
+        },
       ],
       api_regression_test:
         "POST /api/cart/summary returns 200 when confirmedQty is numeric.",
@@ -123,8 +155,10 @@ test("Jira markdown export is built from incident package fields", () => {
   const markdown = buildJiraMarkdown(incidentPackage);
 
   assert.match(markdown, /^# Unable to move from cart to order summary/);
+  assert.match(markdown, /in Direct Orders app/);
   assert.match(markdown, /Blocks order placement/);
   assert.match(markdown, /items\[0\]\.confirmedQty/);
+  assert.match(markdown, /response\.orderSummary should not be null/);
 });
 
 test("incident report markdown includes RCA, tests, release gate, and evidence", () => {
@@ -132,7 +166,9 @@ test("incident report markdown includes RCA, tests, release gate, and evidence",
 
   assert.match(markdown, /## Root-Cause Hypotheses/);
   assert.match(markdown, /Backend summary API rejects null confirmedQty/);
+  assert.match(markdown, /Likely owner: Backend validation \+ frontend error handling/);
   assert.match(markdown, /Then status 200/);
+  assert.match(markdown, /response\.items\[\*\]\.confirmedQty should contain numbers/);
   assert.match(markdown, /Decision: BLOCK/);
   assert.match(markdown, /CartSummaryValidationException/);
 });

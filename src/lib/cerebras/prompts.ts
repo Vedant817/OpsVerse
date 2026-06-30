@@ -122,13 +122,17 @@ You are the Root Cause Agent.
 
 Combine the evidence from Vision, Log, API, and DB agents. Produce:
 - root_cause_summary
+- user_impact
+- likely_owner
 - confidence from 0 to 1
 - evidence_links using agent names
-- hypotheses with hypothesis, confidence, and supporting_evidence
+- at least three hypotheses with hypothesis, confidence, and supporting_evidence
 - alternative_hypotheses
 - missing_evidence
 
 Do not invent facts beyond the evidence. If evidence is missing, list it.
+When evidence shows a blocked user journey, name the user impact and likely
+engineering owner directly.
 
 Incident:
 ${JSON.stringify(incident, null, 2)}
@@ -164,10 +168,14 @@ You are the Regression Test Agent.
 Using the incident, RCA, API analysis, and DB analysis, generate:
 - manual_qa_steps as an array
 - sql_validation as an array of non-destructive SELECT statements
+- api_expectations as an array of objects with behavior and assertion
 - api_regression_test as a concise test description or code-like block
 - postman_assertions as an array
 - karate_test as a Gherkin/Karate-style scenario
 - edge_cases as an array
+
+For a broken API contract, include positive-path expectations, non-null response
+shape assertions, and type assertions for fields that failed validation.
 
 Incident:
 ${JSON.stringify(incident, null, 2)}
@@ -202,6 +210,8 @@ affected flow, severity signal, confidence, missing evidence, API contract risk,
 DB consistency risk, and available or missing regression-test coverage.
 Regression tests run in parallel; recommend the required test coverage instead of
 depending on generated test output.
+If the evidence shows a core order placement or checkout journey is blocked,
+return BLOCK unless the evidence also proves a safe mitigation.
 
 Return:
 - release_gate: PASS, WARN, or BLOCK

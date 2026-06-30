@@ -87,6 +87,8 @@ const db = {
 const rca = {
   root_cause_summary:
     "Cart summary is blocked because confirmedQty is null for SKU 13321.",
+  user_impact: "Blocks order placement",
+  likely_owner: "Backend validation + frontend error handling",
   confidence: 0.88,
   evidence_links: ["log_agent", "api_agent", "db_agent"],
   hypotheses: [
@@ -119,6 +121,20 @@ const regressionTests = {
   ],
   sql_validation: [
     "SELECT sku_code, confirmed_qty FROM ck_stock WHERE outlet_code = '1000023';",
+  ],
+  api_expectations: [
+    {
+      behavior: "Cart summary should return 200 when valid SKUs are present",
+      assertion: "response.status === 200",
+    },
+    {
+      behavior: "response.orderSummary should not be null",
+      assertion: "response.orderSummary != null",
+    },
+    {
+      behavior: "response.items[*].confirmedQty should contain numbers",
+      assertion: "every confirmedQty is a number",
+    },
   ],
   api_regression_test:
     "POST /api/cart/summary should return 200 when confirmedQty is numeric.",
@@ -190,6 +206,8 @@ test("mocked model responses for every prompt validate through production parser
       output: rca,
       requiredTerms: [
         "root_cause_summary",
+        "user_impact",
+        "likely_owner",
         "evidence_links",
         "alternative_hypotheses",
       ],
@@ -199,7 +217,12 @@ test("mocked model responses for every prompt validate through production parser
       prompt: buildTestAgentPrompt({ incident, rca, api, db }),
       schema: regressionTestOutputSchema,
       output: regressionTests,
-      requiredTerms: ["karate_test", "postman_assertions", "manual_qa_steps"],
+      requiredTerms: [
+        "api_expectations",
+        "karate_test",
+        "postman_assertions",
+        "manual_qa_steps",
+      ],
     },
     {
       name: "release",
@@ -275,4 +298,41 @@ test("analysis schemas reject outputs that omit required confidence fields", () 
     () => rcaOutputSchema.parse(hypothesisWithoutConfidence),
     /confidence/,
   );
+});
+
+test("primary sample final-output contract preserves expected engineering actions", () => {
+  const parsedRca = rcaOutputSchema.parse(rca);
+  const parsedTests = regressionTestOutputSchema.parse(regressionTests);
+  const parsedRelease = releaseRiskOutputSchema.parse(release);
+
+  assert.deepEqual(
+    parsedRca.hypotheses.map((item) => item.hypothesis),
+    [
+      "Backend mapper no longer defaults confirmedQty",
+      "Frontend hides validation feedback",
+      "Stock row quantity data is inconsistent",
+    ],
+  );
+  assert.equal(parsedRca.user_impact, "Blocks order placement");
+  assert.equal(parsedRca.likely_owner, "Backend validation + frontend error handling");
+  assert.deepEqual(parsedTests.manual_qa_steps, [
+    "Login as Direct Orders user",
+    "Select outlet 1000023",
+    "Add SKU 13321 and SKU 14498 to cart",
+    "Click Proceed to Summary",
+  ]);
+  assert.deepEqual(
+    parsedTests.api_expectations.map((item) => item.behavior),
+    [
+      "Cart summary should return 200 when valid SKUs are present",
+      "response.orderSummary should not be null",
+      "response.items[*].confirmedQty should contain numbers",
+    ],
+  );
+  assert.equal(parsedRelease.release_gate, "BLOCK");
+  assert.match(parsedRelease.reason, /Core order placement path is blocked/);
+  assert.deepEqual(parsedRelease.must_fix_before_release, [
+    "Restore confirmedQty default mapping",
+    "Show validation feedback in the cart UI",
+  ]);
 });
