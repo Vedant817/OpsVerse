@@ -22,6 +22,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Run a server-side incident swarm through `/api/agents/run`.
 - Stream live agent progress through `/api/agents/stream`.
 - Show runtime readiness for Cerebras, Supabase, and public app URL without exposing secrets.
+- Show demo preflight readiness for bundled samples, primary sample signals, live AI, local demo mode, and persistence without exposing secrets.
 - Execute deterministic Intake plus Vision, Log, API, DB, RCA, Test, Release, and Narrator agent stages.
 - Validate model output with Zod schemas and show failed-agent states when provider calls fail.
 - Render the agent graph, result tabs, Jira output, release gate, speed metrics, and narrator submission output from route output.
@@ -64,6 +65,7 @@ Key files:
 - `src/app/api/agents/run/route.ts` - main swarm route.
 - `src/app/api/agents/stream/route.ts` - live swarm progress stream.
 - `src/app/api/runtime/status/route.ts` - server runtime readiness status.
+- `src/app/api/runtime/preflight/route.ts` - fail-closed primary demo readiness preflight.
 - `src/lib/agents/orchestrator.ts` - dependency flow and failed-agent gating.
 - `src/lib/agents/*-agent.ts` - individual agents.
 - `src/lib/cerebras/client.ts` - lazy OpenAI-compatible Cerebras client.
@@ -140,9 +142,12 @@ Browser smoke check:
 ```bash
 npm run dev -- --hostname 127.0.0.1 --port 3000
 npm run verify:ui
+npm run verify:preflight
 ```
 
 The UI check uses local Chrome through the Chrome DevTools Protocol. It verifies `/` and `/incident` at desktop and mobile widths, checks required visible copy, fails on console/runtime errors, and fails on document-level horizontal overflow.
+
+`npm run verify:preflight` calls `/api/runtime/preflight` on the running app. It fails when the primary sample is not runnable, sample evidence no longer validates, or live AI is blocked without explicit local demo mode. Supabase persistence is reported as a warning until live insert/select refresh is configured and verified.
 
 Useful API smoke checks:
 

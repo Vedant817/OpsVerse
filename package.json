@@ -13,7 +13,8 @@
     "verify:ui": "node scripts/browser-smoke.mjs",
     "verify:local": "npm run typecheck && npm run lint && npm test && npm run build && npm run verify:secrets && npm audit --audit-level=moderate",
     "verify:deployment": "node scripts/deployment-readiness.mjs",
-    "verify:submission": "node scripts/submission-readiness.mjs"
+    "verify:submission": "node scripts/submission-readiness.mjs",
+    "verify:preflight": "node scripts/runtime-preflight-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

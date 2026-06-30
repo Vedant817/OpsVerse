@@ -1057,6 +1057,35 @@ Verification note:
 - HTTP smoke verified `/api/runtime/status` returned Cerebras configured for `gemma-4-31b`, `model_available: false`, available models `gpt-oss-120b` and `zai-glm-4.7`, Supabase missing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and `NEXT_PUBLIC_APP_URL=http://localhost:3000`.
 - The response includes missing env variable names but does not include actual API key or service-role values.
 
+### 11.5 Runtime Demo Preflight Route
+
+- [x] Implement `app/api/runtime/preflight/route.ts`.
+- [x] Validate bundled sample evidence without running fake agent output.
+- [x] Verify the primary sample still contains the cart summary API, HTTP 422, confirmed quantity, SKU, correlation-id, and fallback-removal signals needed for the demo.
+- [x] Report live Cerebras Gemma readiness without exposing `CEREBRAS_API_KEY`.
+- [x] Report explicit local demo mode separately from live AI readiness.
+- [x] Report Supabase persistence as a warning when it is not configured, not as a fake durable dashboard claim.
+- [x] Add a sidebar Demo Preflight panel that consumes the route and shows primary sample, sample pack, live AI, persistence, blocker, and warning states.
+- [x] Add `npm run verify:preflight` for command-line verification against a running app.
+
+Acceptance criteria:
+
+- [x] The route is no-store and returns structured pass/warn/block checks.
+- [x] The UI shows preflight blockers before a user runs the swarm.
+- [x] The CLI exits nonzero when blockers are returned.
+- [x] No secret values are returned by the preflight route or printed by the CLI.
+
+Verification note:
+
+- Added `src/lib/runtime/preflight.ts`, `src/app/api/runtime/preflight/route.ts`, `scripts/runtime-preflight-check.mjs`, and tests for both the preflight builder and CLI verifier.
+- Added a `Demo Preflight` sidebar panel in `src/components/evidence-uploader.tsx`.
+- `npm test -- --test-name-pattern=runtime` passed with 54 tests.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run verify:ui` passed against the running dev server for `/` and `/incident` on desktop `1440x1000` and mobile `390x900`.
+- `curl -s http://127.0.0.1:3000/api/runtime/preflight` returned `can_run_primary_sample: true`, `ready_for_live_ai: true`, `sample_count: 3`, 0 blockers, and one Supabase persistence warning.
+- `npm run verify:preflight` passed against `http://127.0.0.1:3000/api/runtime/preflight`, reporting the primary sample runnable in `live_cerebras` mode, live AI ready, and Supabase persistence not configured.
+
 ---
 
 ## 12. Final Product Outputs
@@ -1467,10 +1496,12 @@ npm run build
 npm test
 npm run verify:secrets
 npm run verify:ui
+npm run verify:preflight
 ```
 
 If the project uses pnpm, replace `npm` with `pnpm`.
 `npm run verify:ui` requires a running local app, for example `npm run dev -- --hostname 127.0.0.1 --port 3000`.
+`npm run verify:preflight` also requires a running local app and calls `/api/runtime/preflight`.
 
 Verification note:
 
@@ -1478,12 +1509,14 @@ Verification note:
 - Added `npm run verify:deployment` for repeatable deployment readiness checks.
 - Added `npm run verify:secrets` for tracked-file secret-pattern scanning.
 - Added `npm run verify:ui` for repeatable browser smoke checks across `/` and `/incident`.
+- Added `npm run verify:preflight` for repeatable primary-demo readiness checks against `/api/runtime/preflight`.
 - Added `npm test` using Node's built-in test runner with `tsx`.
 - Added `tests/schemas-and-samples.test.ts` to verify bundled samples and schema-backed incident packages.
 - `npm test` currently passes with 49 tests.
 - `npm run verify:local` previously passed after the test slice. After the final-output contract slice it passed typecheck, lint, and tests, then Turbopack hit a sandbox-only port-binding panic during build; the same `npm run build` command passed outside the sandbox, and `npm run verify:secrets` plus `npm audit --audit-level=moderate` passed afterward.
 - `npm run verify:secrets` passed after adding tracked-file scanning for API keys, provider tokens, GitHub/GitLab tokens, Slack tokens, and non-empty secret env assignments.
 - `npm run verify:ui` passed against a local dev server for desktop `1440x1000` and mobile `390x900`, with no console/runtime errors and no document-level horizontal overflow.
+- `npm run verify:preflight` passed against a local dev server with 0 blockers, primary sample runnable, live Cerebras ready, 3 valid samples, and a Supabase persistence warning.
 - With `OPSVERSE_LOCAL_AGENT_MODE=enabled`, `npm run verify:ui` passed against `http://127.0.0.1:3003`, and HTTP checks verified the primary sample plus both additional samples complete through the local demo route with no provider metrics.
 - With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP checks verified the primary sample completes through the live Gemma route with 9 complete metric-bearing runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
