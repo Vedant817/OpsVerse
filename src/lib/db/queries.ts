@@ -200,6 +200,16 @@ export async function createIncidentWithEvidence(incident: IncidentEvidence) {
   return incidentId;
 }
 
+export async function updateIncidentStatus(incidentId: string, status: string) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("incidents")
+    .update({ status })
+    .eq("id", incidentId);
+
+  assertNoDatabaseError(error, `Update incident status to ${status}`);
+}
+
 export async function saveAgentRuns(incidentId: string, agentRuns: AgentRun[]) {
   const supabase = getSupabaseAdminClient();
   const { error } = await supabase.from("agent_runs").insert(

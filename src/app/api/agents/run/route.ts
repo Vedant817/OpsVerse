@@ -13,6 +13,7 @@ import {
   loadIncidentEvidence,
   saveAgentRun,
   saveSpeedBenchmarkData,
+  updateIncidentStatus,
 } from "@/lib/db/queries";
 import {
   ImageValidationError,
@@ -114,6 +115,18 @@ export async function POST(request: Request) {
       }
     }
 
+    if (persistence.enabled && persistence.incident_id) {
+      try {
+        await updateIncidentStatus(persistence.incident_id, "running");
+      } catch (error) {
+        if (error instanceof DatabaseQueryError) {
+          return databaseErrorResponse(error, persistence);
+        }
+
+        throw error;
+      }
+    }
+
     const result = await runIncidentSwarmWithEvents(incident, {
       incidentId: persistence.incident_id,
       async onEvent(event) {
@@ -161,6 +174,11 @@ export async function POST(request: Request) {
           );
           persistence.saved_speed_benchmark = true;
         }
+
+        await updateIncidentStatus(
+          persistence.incident_id,
+          completed ? "completed" : "failed",
+        );
       } catch (error) {
         if (error instanceof DatabaseQueryError) {
           return NextResponse.json(

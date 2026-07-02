@@ -16,6 +16,7 @@ import {
   loadIncidentEvidence,
   saveAgentRun,
   saveSpeedBenchmarkData,
+  updateIncidentStatus,
 } from "@/lib/db/queries";
 import {
   getCerebrasEnv,
@@ -96,6 +97,11 @@ async function persistFinalResult(
       );
       persistence.saved_speed_benchmark = true;
     }
+
+    await updateIncidentStatus(
+      persistence.incident_id,
+      completed ? "completed" : "failed",
+    );
   } catch (error) {
     if (error instanceof DatabaseQueryError) {
       persistence.error = error.causeDetail ?? error.message;
@@ -177,6 +183,10 @@ export async function POST(request: Request) {
 
         if (!requestedIncidentId && persistence.enabled) {
           persistence.incident_id = await createIncidentWithEvidence(incident);
+        }
+
+        if (persistence.enabled && persistence.incident_id) {
+          await updateIncidentStatus(persistence.incident_id, "running");
         }
 
         const result = await runIncidentSwarmWithEvents(incident, {
