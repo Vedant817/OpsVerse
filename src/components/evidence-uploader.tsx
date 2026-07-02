@@ -681,6 +681,81 @@ function VisualEvidencePreviews({
   );
 }
 
+function RunPersistencePanel({
+  persistence,
+}: {
+  persistence: SwarmApiResponse["persistence"] | undefined;
+}) {
+  if (!persistence) {
+    return null;
+  }
+
+  const hasDashboard = Boolean(persistence.enabled && persistence.incident_id);
+  const borderClass = hasDashboard
+    ? "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]"
+    : "border-[#ead18f] bg-[#fff9e6] text-[#725300]";
+  const savedRows = persistence.saved_agent_run_count ?? 0;
+
+  return (
+    <div className={`rounded border p-4 text-sm ${borderClass}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 font-semibold">
+            <Database size={17} aria-hidden="true" />
+            Dashboard persistence
+          </div>
+          <p className="mt-2 leading-6">
+            {hasDashboard
+              ? "This incident was saved with a durable dashboard URL. Refreshing that URL reloads persisted evidence and saved agent outputs."
+              : persistence.enabled
+                ? "Persistence was configured, but this run did not produce a refreshable dashboard URL."
+                : "Supabase persistence is not configured, so this run is available in the current browser session only."}
+          </p>
+        </div>
+
+        {hasDashboard ? (
+          <a
+            href={`/dashboard/${persistence.incident_id}`}
+            className="inline-flex h-10 shrink-0 items-center rounded border border-[#b8d9d4] bg-white/70 px-3 text-sm font-semibold hover:bg-[#dff7f3]"
+          >
+            Open persisted dashboard
+          </a>
+        ) : null}
+      </div>
+
+      <dl className="mt-3 grid gap-2 text-xs md:grid-cols-3">
+        <div className="rounded border border-current/20 bg-white/60 p-3">
+          <dt className="font-semibold">Incident id</dt>
+          <dd className="mt-1 truncate font-mono">
+            {persistence.incident_id ?? "not persisted"}
+          </dd>
+        </div>
+        <div className="rounded border border-current/20 bg-white/60 p-3">
+          <dt className="font-semibold">Agent rows</dt>
+          <dd className="mt-1 font-mono">
+            {persistence.saved_agent_runs
+              ? `${savedRows} saved`
+              : "not saved"}
+          </dd>
+        </div>
+        <div className="rounded border border-current/20 bg-white/60 p-3">
+          <dt className="font-semibold">Speed benchmark</dt>
+          <dd className="mt-1 font-mono">
+            {persistence.saved_speed_benchmark ? "saved" : "not saved"}
+          </dd>
+        </div>
+      </dl>
+
+      {persistence.error ? (
+        <p className="mt-3 rounded border border-current/20 bg-white/60 p-3 text-xs leading-5">
+          <span className="font-semibold">Persistence error:</span>{" "}
+          {persistence.error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [form, setForm] = useState<EvidenceFormState>(emptyForm);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
@@ -1381,15 +1456,11 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                       {runPackage.runtime.note}
                     </p>
                   ) : null}
-                  {runResult?.persistence?.incident_id ? (
-                    <a
-                      href={`/dashboard/${runResult.persistence.incident_id}`}
-                      className="mt-3 inline-flex h-10 items-center rounded border border-[#b8d9d4] px-3 text-sm font-semibold hover:bg-[#dff7f3]"
-                    >
-                      Open persisted dashboard
-                    </a>
-                  ) : null}
                 </div>
+              ) : null}
+
+              {runResult ? (
+                <RunPersistencePanel persistence={runResult.persistence} />
               ) : null}
 
               {submitState === "running" && streamStatus ? (

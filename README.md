@@ -31,6 +31,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Evaluate completed incident packages with output quality gates for RCA, screenshot understanding, reproduction steps, SQL, API tests, release risk, and primary demo alignment.
 - Persist incidents/evidence/agent runs when Supabase is configured.
 - Persist completed and failed agent rows as each agent finishes when Supabase is configured.
+- Show post-run dashboard persistence state, saved agent-row count, saved benchmark state, and the durable dashboard link when Supabase returns one.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
 No static RCA/Jira/test/release answer is pasted into the app as if it came from AI. Sample data is synthetic and only seeds the same runtime path used by manual evidence.
