@@ -507,6 +507,68 @@ function statusClass(configured: boolean) {
     : "border-[#f0b89d] bg-[#fff4ed] text-[#9a3412]";
 }
 
+function VisualEvidencePreviews({
+  screenshotDataUri,
+  screenshotFileName,
+  videoFrameDataUris,
+  videoFileName,
+}: {
+  screenshotDataUri: string;
+  screenshotFileName: string;
+  videoFrameDataUris: string[];
+  videoFileName: string;
+}) {
+  const previews = [
+    screenshotDataUri
+      ? {
+          id: "screenshot",
+          label: "Screenshot",
+          title: screenshotFileName || "Uploaded screenshot",
+          dataUri: screenshotDataUri,
+        }
+      : null,
+    ...videoFrameDataUris.slice(0, 3).map((dataUri, index) => ({
+      id: `video-frame-${index}`,
+      label: `Frame ${index + 1}`,
+      title: videoFileName || "Representative video frame",
+      dataUri,
+    })),
+  ].filter((preview): preview is {
+    id: string;
+    label: string;
+    title: string;
+    dataUri: string;
+  } => preview !== null);
+
+  if (previews.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-3 rounded border border-[#d6d1bf] bg-[#fbfaf5] p-3 md:grid-cols-2 xl:grid-cols-4">
+      {previews.map((preview) => (
+        <div key={preview.id} className="grid gap-2">
+          <div
+            aria-label={`${preview.label}: ${preview.title}`}
+            className="aspect-video rounded border border-[#cfcab8] bg-white bg-contain bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url(${preview.dataUri})`,
+            }}
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase text-[#625d52]">
+              {preview.label}
+            </p>
+            <p className="truncate font-mono text-xs text-[#111111]">
+              {preview.title}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
   const [form, setForm] = useState<EvidenceFormState>(emptyForm);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
@@ -1129,6 +1191,13 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
                   ) : null}
                 </label>
               </div>
+
+              <VisualEvidencePreviews
+                screenshotDataUri={form.screenshotDataUri}
+                screenshotFileName={form.screenshotFileName || screenshotName}
+                videoFrameDataUris={form.videoFrameDataUris}
+                videoFileName={form.videoFileName || videoName}
+              />
 
               <label className="grid gap-2 text-sm font-semibold">
                 Screenshot / frame notes
