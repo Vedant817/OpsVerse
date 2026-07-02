@@ -6,12 +6,12 @@ import {
   isEnvConfigError,
   isSupabasePersistenceConfigured,
 } from "@/lib/env";
-import { runIncidentSwarm } from "@/lib/agents/orchestrator";
+import { runIncidentSwarmWithEvents } from "@/lib/agents/orchestrator";
 import {
   createIncidentWithEvidence,
   DatabaseQueryError,
   loadIncidentEvidence,
-  saveAgentRuns,
+  saveAgentRun,
   saveSpeedBenchmarkData,
 } from "@/lib/db/queries";
 import {
@@ -30,6 +30,7 @@ type PersistenceState = {
   enabled: boolean;
   incident_id: string | null;
   saved_agent_runs: boolean;
+  saved_agent_run_count: number;
   saved_speed_benchmark: boolean;
   error: string | null;
 };
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
       enabled: isSupabasePersistenceConfigured(),
       incident_id: requestedIncidentId,
       saved_agent_runs: false,
+      saved_agent_run_count: 0,
       saved_speed_benchmark: false,
       error: null,
     };
@@ -112,15 +114,44 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = await runIncidentSwarm(incident, {
+    const result = await runIncidentSwarmWithEvents(incident, {
       incidentId: persistence.incident_id,
+      async onEvent(event) {
+        if (
+          event.type !== "agent_completed" ||
+          !persistence.enabled ||
+          !persistence.incident_id ||
+          persistence.error
+        ) {
+          return;
+        }
+
+        try {
+          await saveAgentRun(persistence.incident_id, event.run);
+          persistence.saved_agent_run_count += 1;
+        } catch (error) {
+          if (error instanceof DatabaseQueryError) {
+            persistence.error = error.causeDetail ?? error.message;
+            return;
+          }
+
+          throw error;
+        }
+      },
     });
     const completed = result.agent_runs.every((run) => run.status === "complete");
+    persistence.saved_agent_runs =
+      persistence.saved_agent_run_count === result.agent_runs.length &&
+      result.agent_runs.length > 0;
 
     if (persistence.enabled && persistence.incident_id) {
       try {
-        await saveAgentRuns(persistence.incident_id, result.agent_runs);
-        persistence.saved_agent_runs = true;
+        if (persistence.error) {
+          throw new DatabaseQueryError(
+            "Save agent runs failed.",
+            persistence.error,
+          );
+        }
 
         if (completed && result.runtime?.mode === "live_cerebras") {
           await saveSpeedBenchmarkData(

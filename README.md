@@ -28,6 +28,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Render the agent graph, result tabs, Jira output, release gate, speed metrics, and narrator submission output from route output.
 - Evaluate completed incident packages with output quality gates for RCA, screenshot understanding, reproduction steps, SQL, API tests, release risk, and primary demo alignment.
 - Persist incidents/evidence/agent runs when Supabase is configured.
+- Persist completed and failed agent rows as each agent finishes when Supabase is configured.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
 No static RCA/Jira/test/release answer is pasted into the app as if it came from AI. Sample data is synthetic and only seeds the same runtime path used by manual evidence.
@@ -175,6 +176,8 @@ Apply `supabase/schema.sql` to a Supabase project, then set:
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 `SUPABASE_SERVICE_ROLE_KEY` is used only from server-only modules. If Supabase is missing, incident creation returns HTTP `503` and the dashboard shows a visible configuration error instead of pretending persistence worked.
+
+When Supabase is configured, both the JSON and streaming swarm routes create the incident/evidence record before execution and save each `agent_completed` row as the orchestrator emits it. The streaming route emits a `persistence_error` event if an agent row cannot be saved; the final response does not claim durable dashboard refresh when persistence failed.
 
 After applying the schema and exporting the Supabase environment variables, run:
 

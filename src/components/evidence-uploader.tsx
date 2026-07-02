@@ -51,6 +51,7 @@ type SwarmApiResponse = {
     enabled: boolean;
     incident_id: string | null;
     saved_agent_runs: boolean;
+    saved_agent_run_count?: number;
     saved_speed_benchmark: boolean;
     error: string | null;
   };
@@ -87,6 +88,12 @@ type SwarmStreamEvent =
       detail?: string;
       missing?: string[];
       issues?: Array<{ path: string; message: string }>;
+    }
+  | {
+      type: "persistence_error";
+      error: string;
+      detail?: string;
+      persistence?: SwarmApiResponse["persistence"];
     };
 
 type RuntimeStatus = {
@@ -880,6 +887,15 @@ export function EvidenceUploader({ samples }: EvidenceUploaderProps) {
             setStreamRuns(streamEvent.result.agent_runs);
             setActiveAgents([]);
             setStreamStatus("Incident swarm stream closed.");
+          } else if (streamEvent.type === "persistence_error") {
+            setStreamStatus("Persistence failed while saving an agent run.");
+            setRunResult((current) => ({
+              ok: false,
+              error: streamEvent.error,
+              result: current?.result,
+              persistence: streamEvent.persistence,
+            }));
+            setRunError(streamEvent.detail || streamEvent.error);
           } else if (streamEvent.type === "swarm_error") {
             throw new Error(streamErrorMessage(streamEvent));
           }

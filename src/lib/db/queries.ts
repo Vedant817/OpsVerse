@@ -221,6 +221,25 @@ export async function saveAgentRuns(incidentId: string, agentRuns: AgentRun[]) {
   assertNoDatabaseError(error, "Save agent runs");
 }
 
+export async function saveAgentRun(incidentId: string, run: AgentRun) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase.from("agent_runs").insert({
+    incident_id: incidentId,
+    agent_name: run.agent_name,
+    status: run.status,
+    latency_ms: run.metrics?.latencyMs ?? null,
+    prompt_tokens: run.metrics?.promptTokens ?? null,
+    completion_tokens: run.metrics?.completionTokens ?? null,
+    total_tokens: run.metrics?.totalTokens ?? null,
+    tokens_per_second: run.metrics?.tokensPerSecond ?? null,
+    time_info: run.metrics?.timeInfo ?? null,
+    output: run.output,
+    error: run.error,
+  });
+
+  assertNoDatabaseError(error, `Save ${run.agent_name} run`);
+}
+
 export async function saveSpeedBenchmarkData(
   incidentId: string,
   finalPackage: FinalIncidentPackage,

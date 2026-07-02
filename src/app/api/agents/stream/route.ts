@@ -14,7 +14,7 @@ import {
   DatabaseQueryError,
   createIncidentWithEvidence,
   loadIncidentEvidence,
-  saveAgentRuns,
+  saveAgentRun,
   saveSpeedBenchmarkData,
 } from "@/lib/db/queries";
 import {
@@ -39,6 +39,7 @@ type PersistenceState = {
   enabled: boolean;
   incident_id: string | null;
   saved_agent_runs: boolean;
+  saved_agent_run_count: number;
   saved_speed_benchmark: boolean;
   error: string | null;
 };
@@ -79,8 +80,13 @@ async function persistFinalResult(
   }
 
   try {
-    await saveAgentRuns(persistence.incident_id, result.agent_runs);
-    persistence.saved_agent_runs = true;
+    if (persistence.error) {
+      throw new DatabaseQueryError("Save agent runs failed.", persistence.error);
+    }
+
+    persistence.saved_agent_runs =
+      persistence.saved_agent_run_count === result.agent_runs.length &&
+      result.agent_runs.length > 0;
 
     if (completed && result.runtime?.mode === "live_cerebras") {
       await saveSpeedBenchmarkData(
@@ -159,6 +165,7 @@ export async function POST(request: Request) {
           enabled: isSupabasePersistenceConfigured(),
           incident_id: requestedIncidentId,
           saved_agent_runs: false,
+          saved_agent_run_count: 0,
           saved_speed_benchmark: false,
           error: null,
         };
@@ -174,12 +181,36 @@ export async function POST(request: Request) {
 
         const result = await runIncidentSwarmWithEvents(incident, {
           incidentId: persistence.incident_id,
-          onEvent(event) {
+          async onEvent(event) {
             send(event.type, event);
             if (event.type === "agent_completed") {
               const metricsEvent = metricsUpdatedStreamEvent(event.run);
               if (metricsEvent) {
                 send("metrics_updated", metricsEvent);
+              }
+
+              if (
+                persistence.enabled &&
+                persistence.incident_id &&
+                !persistence.error
+              ) {
+                try {
+                  await saveAgentRun(persistence.incident_id, event.run);
+                  persistence.saved_agent_run_count += 1;
+                } catch (error) {
+                  if (error instanceof DatabaseQueryError) {
+                    persistence.error = error.causeDetail ?? error.message;
+                    send("persistence_error", {
+                      type: "persistence_error",
+                      error: "Agent run persistence failed.",
+                      detail: persistence.error,
+                      persistence,
+                    });
+                    return;
+                  }
+
+                  throw error;
+                }
               }
             }
           },

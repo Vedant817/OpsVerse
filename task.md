@@ -242,6 +242,7 @@ Verification note:
 - Extracted dashboard record reconstruction into `src/lib/dashboard/record.ts` so the server dashboard page and tests use the same package-building path.
 - No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
 - Added opt-in local deterministic agent mode through `OPSVERSE_LOCAL_AGENT_MODE=enabled`. It runs the same API/UI package path, is labeled as `local_demo`, derives outputs from submitted evidence, stores no provider metrics, and is documented as not live Gemma/Cerebras execution.
+- Added per-agent completion persistence for configured Supabase runs. `/api/agents/run` and `/api/agents/stream` now call `saveAgentRun` from the orchestrator `agent_completed` event path, so completed and failed agent rows are written as each agent finishes instead of waiting for one final batch insert. The stream route also emits a `persistence_error` event if saving an agent row fails.
 - `npm run typecheck` and `npm run lint` passed after the DB layer was added.
 - API smoke checks on `127.0.0.1:3000` confirmed invalid incident JSON returns HTTP 400, invalid evidence returns HTTP 400, and valid sample incident creation returns HTTP 503 with missing Supabase env fields when persistence is not configured.
 - `npm test` verifies saved row reconstruction preserves latest evidence rows, screenshot data URIs, frame arrays, completed outputs, failed runs, token metrics, and `time_info`; live Supabase insert/select refresh remains blocked until valid Supabase env values are configured.
@@ -937,6 +938,7 @@ Verification note:
 - `runEvidenceAgents` now launches Vision, Log, API, and DB through a worker pool backed by `Promise.all`, with the default `CEREBRAS_AGENT_CONCURRENCY=4` matching the four independent evidence agents.
 - RCA starts only after the evidence-agent `Promise.all` resolves and the orchestrator has collected Vision, Log, API, and DB outputs/failures.
 - Updated the orchestrator so `test_agent` and `release_agent` both emit `agent_started` after RCA completes and then run inside one `Promise.all`.
+- Configured persistence now saves every `agent_completed` event via `saveAgentRun` in both JSON and SSE swarm routes, including failed dependency rows. This implements per-agent row persistence in code, but remains `[~]` until a real Supabase environment verifies the live write/read path.
 - Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
 - Narrator remains gated on both Regression Test and Release Risk completion.
 - `npm run typecheck` and `npm run lint` passed after the release-agent contract change.
@@ -1543,6 +1545,7 @@ Verification note:
 - With `OPSVERSE_LOCAL_AGENT_MODE=disabled`, HTTP checks verified the primary sample completes through the live Gemma route with 9 complete metric-bearing runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - `node --import tsx --test tests/supabase-persistence-check.test.ts` passed with 3 tests, proving the Supabase verifier validates complete saved dashboard records and fails closed for missing agent rows or missing live Supabase env.
 - After adding the Supabase verifier, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed.
+- After adding per-agent persistence, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed locally without requiring API keys.
 - `npm run verify:supabase` currently returns nonzero as expected because live Supabase env values are not configured; the failure message names `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - `npm run verify:deployment` intentionally returned nonzero because the repo has no git remote and this environment has no `gh` or `vercel` CLI.
 - Quality gates are still blocked from full `[x]` because direct Vision image transport is still partial, Supabase is not configured for live persistence refresh, and production deployment cannot be verified without a GitHub remote and authenticated Vercel tooling.
