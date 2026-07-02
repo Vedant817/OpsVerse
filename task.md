@@ -670,6 +670,7 @@ Verification note:
 - The intake UI now accepts video files up to 30MB, extracts three representative frames in the browser using a temporary video element and canvas, and sends them as `videoFrameDataUris` through the same API path.
 - The intake UI now previews the exact screenshot data URI and up to three representative video frames that will be sent to Vision, so uploaded/generated visual evidence can be inspected before the swarm runs.
 - The server validates every extracted video frame data URI before persistence or model calls.
+- The server now derives visual evidence MIME type, byte size, and readable image dimensions for PNG/JPEG/WebP data URIs, then injects that metadata into the direct Vision prompt and the submitted-notes fallback prompt.
 - Supabase persistence stores extracted frame arrays as `video_frame_data_uris`, and dashboard reconstruction loads them back into the final incident package.
 - `/api/agents/run` and `/api/incidents` validate image payloads before persistence or model calls and return HTTP 400 for invalid image evidence.
 - Direct screenshot pixel analysis remains partial because provider image transport returned HTTP 400 for the tiny PNG probe.
@@ -679,6 +680,7 @@ Verification note:
 - Browser smoke with local Chrome uploaded an in-memory PNG through the screenshot input, displayed the uploaded filename, rendered Intake/Vision agent cards, and showed the real provider failure without a Next error overlay.
 - Browser and HTTP smoke checks verified the loaded primary demo sample includes generated screenshot evidence, attempts the image path, and then completes through the labeled note fallback instead of fake visual output.
 - After adding visual evidence previews, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
+- After adding visual evidence metadata extraction, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, and `npm audit --audit-level=moderate` passed without API-key-required checks.
 
 ---
 

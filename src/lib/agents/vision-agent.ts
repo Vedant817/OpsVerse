@@ -12,7 +12,7 @@ import {
   type IncidentEvidence,
   type VisionOutput,
 } from "@/lib/cerebras/schemas";
-import { validateImageDataUri } from "@/lib/cerebras/image";
+import { validateImageDataUri, type ValidatedImageDataUri } from "@/lib/cerebras/image";
 
 type VisionAgentSuccess = {
   ok: true;
@@ -59,10 +59,45 @@ function visualNotes(incident: IncidentEvidence) {
     .join("\n");
 }
 
-function noteFallbackPrompt(incident: IncidentEvidence, status: number) {
+function visualEvidenceMetadata(images: ValidatedImageDataUri[]) {
+  if (images.length === 0) {
+    return "No validated image/frame data URI metadata was available.";
+  }
+
+  return images
+    .map((image, index) => {
+      const dimensions =
+        image.width && image.height
+          ? `${image.width}x${image.height}`
+          : "dimensions unavailable";
+      const sizeKb = Math.max(1, Math.round(image.sizeBytes / 1024));
+
+      return `${index + 1}. ${image.mimeType}, ${dimensions}, ${sizeKb}KB`;
+    })
+    .join("\n");
+}
+
+function visionPromptWithMetadata(
+  incident: IncidentEvidence,
+  images: ValidatedImageDataUri[],
+) {
+  return `${buildVisionAgentPrompt(incident)}
+
+Validated visual evidence metadata:
+${visualEvidenceMetadata(images)}`;
+}
+
+function noteFallbackPrompt(
+  incident: IncidentEvidence,
+  images: ValidatedImageDataUri[],
+  status: number,
+) {
   return `${buildVisionAgentPrompt(incident)}
 
 The provider rejected image_url evidence with HTTP ${status}. Use only the submitted screenshot/video notes below. Do not claim direct pixel inspection, and make the note-based fallback explicit in the JSON fields.
+
+Validated visual evidence metadata:
+${visualEvidenceMetadata(images)}
 
 Submitted visual notes:
 ${visualNotes(incident)}`;
@@ -94,7 +129,7 @@ export async function runVisionAgent(
       content: [
         {
           type: "text",
-          text: buildVisionAgentPrompt(parsedIncident),
+          text: visionPromptWithMetadata(parsedIncident, images),
         },
         ...images.map((image) => ({
           type: "image_url",
@@ -144,7 +179,7 @@ export async function runVisionAgent(
           messages: [
             {
               role: "user",
-              content: noteFallbackPrompt(parsedIncident, status),
+              content: noteFallbackPrompt(parsedIncident, images, status),
             },
           ],
           responseFormat: {
