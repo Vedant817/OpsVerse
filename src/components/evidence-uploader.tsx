@@ -507,6 +507,38 @@ function statusClass(configured: boolean) {
     : "border-[#f0b89d] bg-[#fff4ed] text-[#9a3412]";
 }
 
+type VisualPreviewMetadata = {
+  mimeType: string;
+  sizeLabel: string;
+  dimensions: string | null;
+  error: string | null;
+};
+
+function dataUriMetadata(dataUri: string) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/.exec(dataUri.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const base64 = match[2];
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  const sizeBytes = Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+
+  return {
+    mimeType: match[1],
+    sizeBytes,
+  };
+}
+
+function formatBytes(sizeBytes: number) {
+  if (sizeBytes >= 1024 * 1024) {
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`;
+  }
+
+  return `${Math.max(1, Math.round(sizeBytes / 1024))}KB`;
+}
+
 function VisualEvidencePreviews({
   screenshotDataUri,
   screenshotFileName,
@@ -518,27 +550,91 @@ function VisualEvidencePreviews({
   videoFrameDataUris: string[];
   videoFileName: string;
 }) {
-  const previews = [
-    screenshotDataUri
-      ? {
-          id: "screenshot",
-          label: "Screenshot",
-          title: screenshotFileName || "Uploaded screenshot",
-          dataUri: screenshotDataUri,
-        }
-      : null,
-    ...videoFrameDataUris.slice(0, 3).map((dataUri, index) => ({
-      id: `video-frame-${index}`,
-      label: `Frame ${index + 1}`,
-      title: videoFileName || "Representative video frame",
-      dataUri,
-    })),
-  ].filter((preview): preview is {
-    id: string;
-    label: string;
-    title: string;
-    dataUri: string;
-  } => preview !== null);
+  const previews = useMemo(
+    () =>
+      [
+        screenshotDataUri
+          ? {
+              id: "screenshot",
+              label: "Screenshot",
+              title: screenshotFileName || "Uploaded screenshot",
+              dataUri: screenshotDataUri,
+            }
+          : null,
+        ...videoFrameDataUris.slice(0, 3).map((dataUri, index) => ({
+          id: `video-frame-${index}`,
+          label: `Frame ${index + 1}`,
+          title: videoFileName || "Representative video frame",
+          dataUri,
+        })),
+      ].filter((preview): preview is {
+        id: string;
+        label: string;
+        title: string;
+        dataUri: string;
+      } => preview !== null),
+    [screenshotDataUri, screenshotFileName, videoFrameDataUris, videoFileName],
+  );
+
+  const [metadataById, setMetadataById] = useState<Record<string, VisualPreviewMetadata>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const pending = previews.map(
+      (preview) =>
+        new Promise<[string, VisualPreviewMetadata]>((resolve) => {
+          const metadata = dataUriMetadata(preview.dataUri);
+
+          if (!metadata) {
+            resolve([
+              preview.id,
+              {
+                mimeType: "Invalid data URI",
+                sizeLabel: "0KB",
+                dimensions: null,
+                error: "Preview payload is not a supported base64 data URI.",
+              },
+            ]);
+            return;
+          }
+
+          const image = new window.Image();
+          image.onload = () => {
+            resolve([
+              preview.id,
+              {
+                mimeType: metadata.mimeType,
+                sizeLabel: formatBytes(metadata.sizeBytes),
+                dimensions: `${image.naturalWidth}x${image.naturalHeight}`,
+                error: null,
+              },
+            ]);
+          };
+          image.onerror = () => {
+            resolve([
+              preview.id,
+              {
+                mimeType: metadata.mimeType,
+                sizeLabel: formatBytes(metadata.sizeBytes),
+                dimensions: null,
+                error: "Dimensions unavailable",
+              },
+            ]);
+          };
+          image.src = preview.dataUri;
+        }),
+    );
+
+    Promise.all(pending).then((entries) => {
+      if (!cancelled) {
+        setMetadataById(Object.fromEntries(entries));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previews]);
 
   if (previews.length === 0) {
     return null;
@@ -562,6 +658,22 @@ function VisualEvidencePreviews({
             <p className="truncate font-mono text-xs text-[#111111]">
               {preview.title}
             </p>
+            <p className="mt-1 text-xs text-[#625d52]">
+              {metadataById[preview.id]
+                ? [
+                    metadataById[preview.id].mimeType,
+                    metadataById[preview.id].dimensions,
+                    metadataById[preview.id].sizeLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ")
+                : "Reading visual metadata..."}
+            </p>
+            {metadataById[preview.id]?.error ? (
+              <p className="mt-1 text-xs text-[#9a3412]">
+                {metadataById[preview.id].error}
+              </p>
+            ) : null}
           </div>
         </div>
       ))}
