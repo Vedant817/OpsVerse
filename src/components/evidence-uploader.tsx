@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
+  ClipboardCopy,
   Database,
   FileJson,
   FileText,
@@ -695,6 +696,13 @@ function RunPersistencePanel({
     ? "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]"
     : "border-[#ead18f] bg-[#fff9e6] text-[#725300]";
   const savedRows = persistence.saved_agent_run_count ?? 0;
+  const dashboardPath = hasDashboard
+    ? `/dashboard/${persistence.incident_id}`
+    : "";
+  const dashboardUrl =
+    hasDashboard && typeof window !== "undefined"
+      ? `${window.location.origin}${dashboardPath}`
+      : dashboardPath;
 
   return (
     <div className={`rounded border p-4 text-sm ${borderClass}`}>
@@ -714,14 +722,31 @@ function RunPersistencePanel({
         </div>
 
         {hasDashboard ? (
-          <a
-            href={`/dashboard/${persistence.incident_id}`}
-            className="inline-flex h-10 shrink-0 items-center rounded border border-[#b8d9d4] bg-white/70 px-3 text-sm font-semibold hover:bg-[#dff7f3]"
-          >
-            Open persisted dashboard
-          </a>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void navigator.clipboard.writeText(dashboardUrl)}
+              className="inline-flex h-10 items-center gap-2 rounded border border-[#b8d9d4] bg-white/70 px-3 text-sm font-semibold hover:bg-[#dff7f3]"
+            >
+              <ClipboardCopy size={16} aria-hidden="true" />
+              Copy URL
+            </button>
+            <a
+              href={dashboardPath}
+              className="inline-flex h-10 items-center rounded border border-[#b8d9d4] bg-white/70 px-3 text-sm font-semibold hover:bg-[#dff7f3]"
+            >
+              Open persisted dashboard
+            </a>
+          </div>
         ) : null}
       </div>
+
+      {hasDashboard ? (
+        <div className="mt-3 rounded border border-current/20 bg-white/60 p-3">
+          <p className="text-xs font-semibold">Refreshable URL</p>
+          <p className="mt-1 break-all font-mono text-xs">{dashboardUrl}</p>
+        </div>
+      ) : null}
 
       <dl className="mt-3 grid gap-2 text-xs md:grid-cols-3">
         <div className="rounded border border-current/20 bg-white/60 p-3">
