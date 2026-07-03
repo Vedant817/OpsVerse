@@ -74,7 +74,9 @@ function createRepoFixture({
           "verify:ui": "node scripts/browser-smoke.mjs",
           "verify:local": "npm run typecheck",
           "verify:deployment": "node scripts/deployment-readiness.mjs",
-          "verify:submission": "node scripts/submission-readiness.mjs",
+          "verify:preflight": "node scripts/runtime-preflight-check.mjs",
+          "verify:supabase": "node --import tsx scripts/supabase-persistence-check.ts",
+          "verify:primary-sample": "node --import tsx scripts/primary-sample-check.ts",
         },
       },
       null,
@@ -136,7 +138,7 @@ test("deployment readiness passes with personal git identity, remote, fake CLIs,
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /PASS Repo-local git user.email uses personal account/);
   assert.match(result.stdout, /PASS Git remote is configured/);
-  assert.match(result.stdout, /PASS GitHub CLI is installed/);
+  assert.match(result.stdout, /PASS GitHub remote is configured or GitHub CLI is installed/);
   assert.match(result.stdout, /PASS Vercel CLI is installed/);
   assert.match(result.stdout, /All deployment readiness checks passed/);
 });
@@ -147,7 +149,7 @@ test("deployment readiness fails closed when remote and required CLIs are missin
 
   assert.equal(result.status, 1);
   assert.match(result.stdout, /FAIL Git remote is configured/);
-  assert.match(result.stdout, /FAIL GitHub CLI is installed/);
+  assert.match(result.stdout, /FAIL GitHub remote is configured or GitHub CLI is installed/);
   assert.match(result.stdout, /FAIL Vercel CLI is installed/);
   assert.match(result.stderr, /3 deployment readiness check\(s\) failed/);
 });
@@ -220,6 +222,8 @@ test("deployment readiness rejects missing readiness package scripts", () => {
       "verify:ui": "node scripts/browser-smoke.mjs",
       "verify:local": "npm run typecheck",
       "verify:deployment": "node scripts/deployment-readiness.mjs",
+      "verify:preflight": "node scripts/runtime-preflight-check.mjs",
+      "verify:supabase": "node --import tsx scripts/supabase-persistence-check.ts",
     },
   });
   const result = runDeploymentReadiness(fixture.dir, fixture.env);
@@ -227,6 +231,6 @@ test("deployment readiness rejects missing readiness package scripts", () => {
   assert.equal(result.status, 1);
   assert.match(
     result.stdout,
-    /FAIL package\.json has verify:submission script - missing/,
+    /FAIL package\.json has verify:primary-sample script - missing/,
   );
 });

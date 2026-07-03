@@ -6,6 +6,8 @@ OpsVerse turns a bug screenshot, screen recording frames, logs, API responses, D
 
 The runtime path uses Next.js API routes, structured schemas, server-side Cerebras calls, optional Supabase persistence, and visible per-agent failure states.
 
+Repository: https://github.com/Vedant817/OpsVerse
+
 ## Hackathon Positioning
 
 - Primary: Track 1, Multiverse Agents.
@@ -205,7 +207,7 @@ The repo includes a Vercel config and a deployment preflight:
 npm run verify:deployment
 ```
 
-This check verifies the repo-local personal git identity, expected local scripts, required environment variable names, Supabase schema tables, ignored local env/Vercel files, tracked secret hygiene, GitHub CLI availability, Vercel CLI availability, and git remote presence.
+This check verifies the repo-local personal git identity, expected local scripts, required environment variable names, Supabase schema tables, ignored local env/Vercel files, tracked secret hygiene, GitHub remote or CLI availability, Vercel CLI availability, and git remote presence.
 
 Expected setup before a real deployment:
 

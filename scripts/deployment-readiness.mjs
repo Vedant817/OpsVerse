@@ -134,13 +134,18 @@ addCheck(
 );
 
 const remotes = runGit(["remote", "-v"]);
+const hasGitRemote = Boolean(remotes);
 addCheck(
   "Git remote is configured for push/deploy provenance",
-  Boolean(remotes),
+  hasGitRemote,
   remotes || "missing remote",
 );
 
-addCheck("GitHub CLI is installed", commandExists("gh"), "required for repo creation/push checks");
+addCheck(
+  "GitHub remote is configured or GitHub CLI is installed",
+  hasGitRemote || commandExists("gh"),
+  hasGitRemote ? "remote configured" : "required when a Git remote is missing",
+);
 addCheck("Vercel CLI is installed", commandExists("vercel"), "required for local Vercel deploy verification");
 
 addCheck("vercel.json exists", existsSync(resolve(root, "vercel.json")));
@@ -155,7 +160,9 @@ const requiredPackageScripts = [
   "verify:ui",
   "verify:local",
   "verify:deployment",
-  "verify:submission",
+  "verify:preflight",
+  "verify:supabase",
+  "verify:primary-sample",
 ];
 
 for (const scriptName of requiredPackageScripts) {

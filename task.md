@@ -1382,7 +1382,7 @@ Acceptance criteria:
 Verification note:
 
 - Replaced the scaffold README with OpsVerse-specific setup, architecture, agent swarm, multimodal input, Supabase, demo flow, verification, security, blockers, and future-scope documentation.
-- README intentionally does not include screenshots, live app URL, GitHub URL, or demo video URL because those artifacts are not verified yet.
+- README intentionally does not include screenshots, live app URL, or demo video URL because those artifacts are not verified yet. It now includes the verified GitHub repository URL after `origin` was configured and pushed.
 - README states current live Gemma success, the remaining direct image transport caveat, and the unresolved Supabase/deployment blockers without claiming unverified production deployment.
 
 ---
@@ -1391,8 +1391,8 @@ Verification note:
 
 ### 17.1 GitHub
 
-- [!] Create GitHub repository.
-- [!] Push with personal git account.
+- [x] Create GitHub repository.
+- [x] Push with personal git account.
 - [x] Confirm commit authorship is personal account.
 - [x] Keep secrets out of git.
 - [x] Add deployment readiness checks for git identity, remote, CLI availability, env placeholders, schema, and tracked secret hygiene.
@@ -1425,14 +1425,16 @@ Verification note:
 - Hardened `scripts/deployment-readiness.mjs` to include the documented `GEMINI_MODEL` baseline env key.
 - `npm run verify:secrets` passed with no tracked or built client secret patterns found.
 - Hardened `scripts/secret-scan.mjs` to scan `.next/static` browser assets when a production build exists, and moved `verify:secrets` after `build` in `npm run verify:local`.
-- `npm run verify:deployment` currently passes repo-local personal git identity, Vercel config, package scripts, `.env.example` coverage, Supabase schema tables, ignore rules, and tracked secret hygiene; it fails as expected because no git remote is configured and GitHub/Vercel CLIs are not installed in this environment.
+- `npm run verify:deployment` previously passed repo-local personal git identity, Vercel config, package scripts, `.env.example` coverage, Supabase schema tables, ignore rules, and tracked secret hygiene, and failed because no git remote was configured and GitHub/Vercel CLIs were not installed in that environment.
 - Added `tests/deployment-readiness.test.ts` to exercise the deployment preflight in temporary git repositories. It verifies a complete fixture with personal git identity, remote, fake GitHub/Vercel CLIs, env placeholders, schema, and ignore rules passes; it also verifies missing remote and missing required CLIs fail closed.
 - Hardened deployment readiness tests to verify the preflight rejects the work git email, non-placeholder secret values in `.env.example`, and an incomplete Supabase schema.
-- Hardened `scripts/deployment-readiness.mjs` to require `test`, `verify:secrets`, `verify:ui`, `verify:deployment`, and `verify:submission` package scripts in addition to typecheck/lint/build/local verification; added test coverage for a missing `verify:submission` script.
+- Hardened `scripts/deployment-readiness.mjs` to require `test`, `verify:secrets`, `verify:ui`, `verify:deployment`, `verify:preflight`, `verify:supabase`, and `verify:primary-sample` package scripts in addition to typecheck/lint/build/local verification; removed the stale `verify:submission` requirement after demo/submission artifacts were taken out of scope.
 - Added `tests/secret-scan.test.ts` to exercise the secret scanner in temporary git repositories. It verifies placeholder env values pass, tracked provider tokens fail, and token-like values in `.next/static` client assets fail.
 - `npm test`, `npm run lint`, `npm run typecheck`, and `npm run verify:secrets` passed after hardening the deployment readiness script coverage.
-- `npm run verify:deployment` now passes every local repository/configuration check and fails only on the expected external setup: missing git remote, missing GitHub CLI, and missing Vercel CLI.
-- Current blockers: no git remote is configured, `gh` is not installed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and direct Vision image transport is still partial because the provider returned HTTP 400 for the tiny PNG probe. The primary live swarm completes through an explicitly labeled submitted-notes fallback.
+- `git remote -v` now shows `origin git@github.com:Vedant817/OpsVerse.git`, `git log --decorate -5` shows `origin/master` at the current branch tip, and `git push origin master` returned `Everything up-to-date` with repo-local personal email `vedantmahajan271@gmail.com`.
+- Deployment readiness now treats a configured GitHub remote as satisfying GitHub repository provenance, so `gh` is not required once `origin` exists and is pushed. The check still fails closed when both a Git remote and GitHub CLI are missing.
+- After removing the stale `verify:submission` deployment-readiness requirement and accepting the configured GitHub remote as GitHub provenance, `node --import tsx --test tests/deployment-readiness.test.ts` passed with 6 tests. `npm run verify:deployment` now passes git identity, git remote, GitHub provenance, Vercel config, package scripts, `.env.example`, Supabase schema, ignore rules, and tracked secret hygiene; it fails only because the Vercel CLI is not installed/authenticated, which remains an external deployment blocker.
+- Current blockers: Vercel deployment is not performed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and direct Vision image transport is still partial because the provider returned HTTP 400 for the tiny PNG probe. The primary live swarm completes through an explicitly labeled submitted-notes fallback.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
 
 ---
