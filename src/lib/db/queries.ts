@@ -60,6 +60,13 @@ export type IncidentDashboardRecord = {
   speedBenchmarks: SpeedBenchmarkRow[];
 };
 
+export type IncidentSummary = {
+  incident: IncidentRow;
+  evidence_count: number;
+  agent_run_count: number;
+  speed_benchmark_count: number;
+};
+
 export class DatabaseQueryError extends Error {
   constructor(
     message: string,
@@ -340,6 +347,60 @@ export async function loadFullIncidentDashboard(
     agentRuns: (agentRunsResult.data ?? []) as AgentRunRow[],
     speedBenchmarks: (speedBenchmarksResult.data ?? []) as SpeedBenchmarkRow[],
   };
+}
+
+export async function listIncidentSummaries(limit = 20): Promise<IncidentSummary[]> {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 50);
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("incidents")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  assertNoDatabaseError(error, "List incidents");
+
+  const incidents = (data ?? []) as IncidentRow[];
+
+  return Promise.all(
+    incidents.map(async (incident) => {
+      const [evidenceResult, agentRunsResult, speedBenchmarksResult] =
+        await Promise.all([
+          supabase
+            .from("incident_evidence")
+            .select("id", { count: "exact", head: true })
+            .eq("incident_id", incident.id),
+          supabase
+            .from("agent_runs")
+            .select("id", { count: "exact", head: true })
+            .eq("incident_id", incident.id),
+          supabase
+            .from("speed_benchmarks")
+            .select("id", { count: "exact", head: true })
+            .eq("incident_id", incident.id),
+        ]);
+
+      assertNoDatabaseError(
+        evidenceResult.error,
+        `Count evidence for incident ${incident.id}`,
+      );
+      assertNoDatabaseError(
+        agentRunsResult.error,
+        `Count agent runs for incident ${incident.id}`,
+      );
+      assertNoDatabaseError(
+        speedBenchmarksResult.error,
+        `Count speed benchmarks for incident ${incident.id}`,
+      );
+
+      return {
+        incident,
+        evidence_count: evidenceResult.count ?? 0,
+        agent_run_count: agentRunsResult.count ?? 0,
+        speed_benchmark_count: speedBenchmarksResult.count ?? 0,
+      };
+    }),
+  );
 }
 
 export async function loadIncidentEvidence(

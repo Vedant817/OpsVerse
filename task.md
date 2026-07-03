@@ -240,6 +240,7 @@ Verification note:
 - Added lazy server-only Supabase admin client in `src/lib/db/supabase.ts`.
 - Added `src/lib/db/queries.ts` functions for incident creation, evidence saving, agent-run saving, full incident loading, incident evidence reconstruction, and speed benchmark saving.
 - Full incident loading now also retrieves saved `speed_benchmarks` rows, so aggregate Cerebras speed data is not write-only after persistence.
+- Added `listIncidentSummaries` for stored incident history, including evidence, agent-run, and speed-benchmark counts for each persisted incident.
 - Extracted dashboard record reconstruction into `src/lib/dashboard/record.ts` so the server dashboard page and tests use the same package-building path.
 - No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
 - Added opt-in local deterministic agent mode through `OPSVERSE_LOCAL_AGENT_MODE=enabled`. It runs the same API/UI package path, is labeled as `local_demo`, derives outputs from submitted evidence, stores no provider metrics, and is documented as not live Gemma/Cerebras execution.
@@ -253,6 +254,7 @@ Verification note:
 - After adding persisted incident lifecycle status updates, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 - After hardening fatal route errors to mark persisted incidents `failed`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 - After loading saved speed benchmark rows into the persisted dashboard/API path, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
+- After adding persisted incident history listing through `GET /api/incidents` and `/dashboard`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `git diff --check`, and local HTTP smoke on `127.0.0.1:3005` passed without API-key-required checks. The HTTP smoke confirmed missing Supabase env values return HTTP 503 from `/api/incidents` and `/dashboard` renders `Incident history unavailable` instead of fake stored incidents.
 
 ---
 
@@ -469,6 +471,7 @@ Verification note:
 
 - Added `src/components/result-tabs.tsx`, `src/components/jira-output.tsx`, `src/components/release-gate.tsx`, and `src/app/dashboard/[id]/page.tsx`.
 - The intake flow renders the same result tabs directly from the `/api/agents/run` response.
+- `/dashboard` lists recent persisted incidents from Supabase when configured, including status and saved row counts; when Supabase is missing it shows a visible history error instead of fake stored output.
 - `/dashboard/[id]` loads persisted evidence and saved agent runs from Supabase when configured; when Supabase is missing it shows a visible dashboard error instead of fake stored output.
 - `/dashboard/[id]` now renders a persisted operational summary from the loaded Supabase row: incident status, module, saved agent-run count, and created time.
 - The persisted dashboard operational summary now shows the latest saved speed benchmark latency/token aggregate when one exists.
@@ -1010,10 +1013,10 @@ Acceptance criteria:
 Verification note:
 
 - Added `POST /api/incidents` with Zod validation and server-only Supabase persistence.
-- Added `GET /api/incidents?id=<incident-id>` to load a persisted incident through the same Supabase dashboard reconstruction path used by `/dashboard/[id]`.
+- Added `GET /api/incidents` to list recent persisted incidents and `GET /api/incidents?id=<incident-id>` to load a persisted incident through the same Supabase dashboard reconstruction path used by `/dashboard/[id]`.
 - Invalid JSON and invalid evidence payloads return HTTP 400 with useful details.
 - Missing Supabase configuration returns HTTP 503; live creation is blocked until valid Supabase env values are provided.
-- Verified over HTTP: malformed JSON returned 400, `{ "title": "x" }` returned 400 with missing field issues, missing GET id returned 400, GET with an id returned 503 listing missing Supabase env fields, and a valid sample payload returned 503 listing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- Verified over HTTP: malformed JSON returned 400, `{ "title": "x" }` returned 400 with missing field issues, GET list returned 503 listing missing Supabase env fields, GET with an id returned 503 listing missing Supabase env fields, and a valid sample payload returned 503 listing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - After adding the persisted incident GET API route, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, `npm run verify:ui`, and local HTTP smoke for missing-id/missing-Supabase GET responses passed without API-key-required checks.
 
 ### 11.2 Agent Run Route

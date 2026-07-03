@@ -33,6 +33,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Persist completed and failed agent rows as each agent finishes when Supabase is configured.
 - Reload saved speed benchmark rows with persisted incident dashboards and incident API responses.
 - Update persisted incident status through `running`, `completed`, and `failed` lifecycle states when Supabase is configured, including best-effort `failed` status on fatal route errors.
+- List recent persisted incidents through `GET /api/incidents` and `/dashboard` when Supabase is configured.
 - Load persisted incident packages through `GET /api/incidents?id=<incident-id>` using the same reconstruction path as `/dashboard/[id]`.
 - Show post-run dashboard persistence state, saved agent-row count, saved benchmark state, and the exact durable dashboard URL with copy/open actions when Supabase returns one.
 - Render persisted dashboard status, module, saved run count, and created time from the loaded Supabase row.
@@ -80,6 +81,7 @@ Key files:
 - `src/lib/cerebras/client.ts` - lazy OpenAI-compatible Cerebras client.
 - `src/lib/cerebras/schemas.ts` - runtime input/output contracts.
 - `src/lib/db/queries.ts` - optional Supabase persistence.
+- `src/app/dashboard/page.tsx` - persisted incident history route.
 - `src/app/dashboard/[id]/page.tsx` - persisted dashboard route.
 - `supabase/schema.sql` - database schema.
 

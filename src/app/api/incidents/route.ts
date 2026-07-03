@@ -5,6 +5,7 @@ import { dashboardRecordToFinalPackage } from "@/lib/dashboard/package";
 import {
   createIncidentWithEvidence,
   DatabaseQueryError,
+  listIncidentSummaries,
   loadFullIncidentDashboard,
 } from "@/lib/db/queries";
 import {
@@ -30,13 +31,7 @@ export async function GET(request: Request) {
   const incidentId = url.searchParams.get("id")?.trim();
 
   if (!incidentId) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Incident id is required.",
-      },
-      { status: 400 },
-    );
+    return listIncidents(url);
   }
 
   try {
@@ -105,6 +100,78 @@ export async function GET(request: Request) {
       {
         ok: false,
         error: "Incident load failed.",
+      },
+      { status: 502 },
+    );
+  }
+}
+
+async function listIncidents(url: URL) {
+  const rawLimit = url.searchParams.get("limit");
+  const limit = rawLimit ? Number.parseInt(rawLimit, 10) : 20;
+
+  if (!Number.isFinite(limit)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Incident list limit must be a number.",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const incidents = await listIncidentSummaries(limit);
+
+    return NextResponse.json(
+      {
+        ok: true,
+        incidents: incidents.map((item) => ({
+          id: item.incident.id,
+          title: item.incident.title,
+          module: item.incident.module,
+          status: item.incident.status,
+          severity: item.incident.severity,
+          created_at: item.incident.created_at,
+          evidence_count: item.evidence_count,
+          saved_agent_run_count: item.agent_run_count,
+          speed_benchmark_count: item.speed_benchmark_count,
+          dashboard_url: `/dashboard/${item.incident.id}`,
+        })),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  } catch (error) {
+    if (isEnvConfigError(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          missing: error.missing,
+        },
+        { status: 503 },
+      );
+    }
+
+    if (error instanceof DatabaseQueryError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          detail: error.causeDetail,
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Incident list failed.",
       },
       { status: 502 },
     );
