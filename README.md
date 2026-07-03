@@ -238,15 +238,7 @@ If the Cerebras model call fails, the UI displays failed agents and provider err
 
 For local development only, set `OPSVERSE_LOCAL_AGENT_MODE=enabled` to run the same intake, streaming, graph, results, export, and dashboard UI path with deterministic evidence-derived outputs. The Runtime panel and completion banner label this mode clearly, no Cerebras speed metrics are generated, and it must not be claimed as live Gemma or Cerebras execution.
 
-The recording script, shot list, and submission drafts are in [`docs/demo-and-submission.md`](docs/demo-and-submission.md). That file intentionally uses verified-link placeholders until the live app, GitHub repository, and demo video exist.
 
-Before posting the final submission, run:
-
-```bash
-npm run verify:submission
-```
-
-This check is expected to fail until the demo video, Vercel production URL, and GitHub repository placeholders in the runbook are replaced with verified public links.
 
 ## Security Notes
 
@@ -264,9 +256,9 @@ This check is expected to fail until the demo video, Vercel production URL, and 
 - The primary live swarm completes through `/api/agents/run` with 9 metric-bearing Gemma runs, RCA, tests, narrator output, and release gate `BLOCK`.
 - Direct Vision image transport is still partial in this environment: the tiny PNG probe receives provider HTTP `400`. OpsVerse falls back to a real Gemma call over submitted visual notes and labels that output as note-based, not direct pixel analysis.
 - Supabase persistence code and a fail-closed live verifier are implemented, but live insert/select refresh is not marked complete until `npm run verify:supabase` is run with valid Supabase environment variables.
-- Deployment, demo video, live app link, and submission links are intentionally absent until verified.
+- Deployment, live app link, and submission links are intentionally absent until verified.
 
 ## Future Scope
 
-- Live production deployment and demo recording after provider and hosting credentials are configured.
+- Live production deployment after provider and hosting credentials are configured.
 - Real Jira/GitHub integrations if the MVP needs authenticated external workflow writes later.

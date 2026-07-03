@@ -15,8 +15,6 @@ Current repository state:
 - [~] Dashboard implemented
 - [~] Supabase persistence implemented
 - [!] Deployment completed
-- [ ] Demo recorded
-- [ ] Submission posts finalized
 
 Status legend:
 
@@ -54,7 +52,7 @@ Verification note:
 - Added `src/components/hero.tsx` and wired it into the first viewport of the intake workflow.
 - The first viewport now renders the exact line `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`.
 - README now uses the required one-line pitch verbatim, and `src/components/hero.tsx` uses the same pitch in product copy.
-- `docs/demo-and-submission.md` and the narrator output path preserve the same pitch context without adding unverified live links.
+- The narrator output path preserves the same pitch context without adding unverified live links.
 - README keeps the hackathon positioning explicit for Track 1, Track 3, and optional People's Choice.
 - The UI labels the workflow as `Synthetic evidence only`, and all bundled samples remain synthetic.
 - `curl -s http://127.0.0.1:3000` returned `OpsVerse - Multimodal Incident Swarm for Enterprise Apps`, `Gemma 4 on Cerebras`, `Synthetic evidence only`, `Run Demo Incident`, and `Upload Evidence`.
@@ -1292,8 +1290,6 @@ Use this order unless a blocking dependency requires a small adjustment.
 - [~] 20. Dashboard refresh loads persisted incident.
 - [x] 21. README complete.
 - [ ] 22. Vercel deployment.
-- [ ] 23. 60-second demo recording.
-- [ ] 24. Submission posts finalized.
 
 ---
 
@@ -1441,83 +1437,10 @@ Verification note:
 
 ---
 
-## 18. Demo and Submission
+## 18. Demo Narrator Agent
 
-### 18.1 60-Second Demo
-
-- [!] Record under 60 seconds.
-- [ ] Show landing page.
-- [ ] Show upload/sample evidence.
-- [ ] Show agent swarm running.
-- [ ] Show RCA, Jira bug, SQL checks, tests, and release gate.
-- [ ] Show speed metrics.
-- [ ] Mention Gemma 4 on Cerebras.
-- [ ] Do not show private data.
-
-Target script:
-
-- [x] 0-5 sec: "Enterprise teams lose hours connecting screenshots, logs, API failures, and DB evidence during incidents."
-- [x] 5-12 sec: "This is OpsVerse, a multimodal incident swarm powered by Gemma 4 on Cerebras."
-- [x] 12-25 sec: "Upload a bug screenshot, logs, API response, and DB snapshot. The swarm launches Vision, Log, API, DB, RCA, Test, and Release agents."
-- [x] 25-40 sec: "Within seconds, it identifies the broken cart-to-summary flow, finds the likely confirmedQty contract issue, and generates root cause hypotheses."
-- [x] 40-52 sec: "It creates a Jira-ready bug, SQL checks, API regression tests, and a release gate decision."
-- [x] 52-60 sec: "Cerebras speed makes this feel real-time: incident chaos becomes release-ready action before the meeting even starts."
-
-### 18.2 Shot List
-
-- [x] Shot 1: Landing page.
-- [x] Shot 2: Upload evidence.
-- [x] Shot 3: Run swarm.
-- [x] Shot 4: Results.
-- [x] Shot 5: Speed metrics.
-
-### 18.3 Track 1 Submission
-
-- [x] Prepare Discord post for `#g4hackathon-multiverse-agents`.
-- [x] Include project name.
-- [x] Include multi-agent and multimodal explanation.
-- [x] Include output package explanation.
-- [ ] Include demo link.
-- [ ] Include live app link.
-- [ ] Include GitHub link.
-
-### 18.4 Track 3 Submission
-
-- [x] Prepare Discord post for `#g4hackathon-enterprise-impact`.
-- [x] Explain business impact:
-  - Faster incident triage.
-  - Better QA handoff.
-  - Auto-generated regression tests.
-  - Jira-ready bug reports.
-  - Release gate decisions.
-  - Reduced production risk.
-- [x] Explain production-readiness:
-  - Server-side API key handling.
-  - Structured outputs.
-  - Agent-level audit trail.
-  - Stored incident history.
-  - Reproducible test generation.
-  - Deployment-ready Next.js + Supabase + Vercel architecture.
-
-Verification note:
-
-- Added a `Submission` result tab that surfaces Demo Narrator output when and only when the narrator agent has generated it from a completed incident package.
-- The tab provides copy actions for the combined submission kit, demo script, Track 1 post, and Track 3 post.
-- The tab explicitly says live app, GitHub, and demo video links must be added only after those artifacts are verified.
-- Demo recording and final submission links remain blocked until a GitHub remote, Vercel deployment, and a recorded video exist. Live primary-sample model output is now locally verified.
-- Added `docs/demo-and-submission.md` with the 60-second script, shot list, Track 1 draft, Track 3 draft, optional X/Twitter draft, and final link checklist. It uses explicit verified-link placeholders and states that it is not proof of recording, deployment, or submission.
-- README now links to the runbook from the Demo Flow section.
-- Added `scripts/submission-readiness.mjs` and `npm run verify:submission` as a fail-closed final submission gate. It validates the runbook sections and link labels, rejects local-only URLs and premature external-completion claims, and fails while verified demo/live/GitHub placeholders remain.
-- Hardened `npm run verify:submission` to require each `Demo:` and `Live app:` value to be an `https://` public URL and each `GitHub:` value to be an `https://github.com/<owner>/<repo>` URL.
-- `npm run verify:submission` currently passes runbook existence, required sections, required link labels, no premature completion claims, and no local-only URLs; it fails as expected because `<verified demo video link>`, `<verified Vercel production link>`, and `<verified GitHub repository link>` remain unresolved and are not public URLs.
-- Added `tests/submission-readiness.test.ts`, covering both fail-closed placeholder behavior and passing behavior for verified public demo/live/GitHub links.
-- `npm run lint`, `npm run typecheck`, `npm test`, and `npm run verify:secrets` passed after hardening the submission readiness gate. The test suite now has 32 tests.
-
-### 18.5 Optional X/Twitter Post
-
-- [ ] Post only after demo video and live app are ready.
-- [ ] Tag `@Cerebras` and `@googlegemma`.
-- [ ] Include demo link.
+- [x] The narrator agent generates demo script, Discord drafts, and X/Twitter post as AI-generated artifacts.
+- [x] The `Submission` result tab surfaces narrator output from a completed incident package.
 
 ---
 
@@ -1535,7 +1458,7 @@ Run relevant checks after each implementation slice.
 - [x] UI is responsive.
 - [x] Agent outputs validate against schemas.
 - [x] Speed metrics are real or clearly labeled sample.
-- [!] Production deployment works before submission.
+- [!] Production deployment works.
 
 Recommended commands once the app exists:
 

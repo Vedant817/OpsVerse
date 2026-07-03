@@ -1125,7 +1125,6 @@ Build these first:
 9. Generate SQL/API regression tests
 10. Show Cerebras speed metrics
 11. Deploy on Vercel
-12. Record 60-second demo
 ```
 
 Do not waste time on:
@@ -1459,197 +1458,6 @@ README sections:
 
 ---
 
-## Hour 21–22: Record 60-Second Demo
-
-Demo script:
-
-```text
-0–5 sec:
-“Enterprise teams lose hours connecting screenshots, logs, API failures, and DB evidence during incidents.”
-
-5–12 sec:
-“This is OpsVerse, a multimodal incident swarm powered by Gemma 4 on Cerebras.”
-
-12–25 sec:
-“Upload a bug screenshot, logs, API response, and DB snapshot. The swarm launches Vision, Log, API, DB, RCA, Test, and Release agents.”
-
-25–40 sec:
-“Within seconds, it identifies the broken cart-to-summary flow, finds the likely confirmedQty contract issue, and generates root cause hypotheses.”
-
-40–52 sec:
-“It creates a Jira-ready bug, SQL checks, API regression tests, and a release gate decision.”
-
-52–60 sec:
-“Cerebras speed makes this feel real-time: incident chaos becomes release-ready action before the meeting even starts.”
-```
-
----
-
-## Hour 22–24: Submit
-
-Submit separately:
-
-```text
-Track 1 Discord:
-#g4hackathon-multiverse-agents
-
-Track 3 Discord:
-#g4hackathon-enterprise-impact
-
-Optional Track 2:
-Post demo on X and tag @Cerebras and @googlegemma
-```
-
----
-
-# Demo Video Shot List
-
-## Shot 1: Landing Page
-
-Show:
-
-```text
-OpsVerse — Multimodal Incident Swarm for Enterprise Apps
-```
-
-Narration:
-
-```text
-“OpsVerse helps enterprise teams debug incidents from screenshots, logs, API responses, and DB evidence.”
-```
-
-## Shot 2: Upload Evidence
-
-Show:
-
-```text
-Screenshot
-Logs
-API JSON
-DB snapshot
-```
-
-Narration:
-
-```text
-“This sample issue blocks order placement in a field-sales app.”
-```
-
-## Shot 3: Run Swarm
-
-Show agent graph animating.
-
-Narration:
-
-```text
-“Gemma 4 agents on Cerebras run in parallel.”
-```
-
-## Shot 4: Results
-
-Show RCA, Jira bug, SQL, tests.
-
-Narration:
-
-```text
-“The swarm produces RCA, reproduction steps, SQL checks, API tests, and a release decision.”
-```
-
-## Shot 5: Speed Metrics
-
-Show latency/tokens.
-
-Narration:
-
-```text
-“Cerebras speed turns incident response from minutes into seconds.”
-```
-
----
-
-# Discord Submission — Track 1
-
-```text
-Project: OpsVerse — Multimodal Incident Swarm for Enterprise Apps
-
-OpsVerse is a multi-agent + multimodal incident-response system powered by Gemma 4 on Cerebras.
-
-It takes screenshots/video frames, logs, API responses, DB snapshots, and optional Git diffs, then coordinates specialized agents:
-- Vision Triage Agent
-- Log Analysis Agent
-- API Contract Agent
-- DB Consistency Agent
-- Root Cause Agent
-- Regression Test Agent
-- Release Risk Agent
-- Demo Narrator Agent
-
-The output is a complete enterprise incident package: RCA, Jira-ready bug, reproduction steps, SQL checks, API regression tests, and release gate decision.
-
-Cerebras speed is shown directly in the UI through per-agent latency, token usage, and total swarm runtime.
-
-Demo:
-<video link>
-
-Live app:
-<vercel link>
-
-GitHub:
-<repo link>
-```
-
----
-
-# Discord Submission — Track 3
-
-```text
-Project: OpsVerse — Enterprise Incident Response with Gemma 4 on Cerebras
-
-Enterprise engineering teams waste time connecting UI failures, logs, API errors, DB state, and release risk. OpsVerse turns this evidence into actionable incident intelligence.
-
-Business impact:
-- Faster incident triage
-- Better QA handoff
-- Auto-generated regression tests
-- Jira-ready bug reports
-- Release gate decisions
-- Reduced production risk
-
-Production-readiness:
-- Server-side API key handling
-- Structured outputs
-- Agent-level audit trail
-- Stored incident history
-- Reproducible test generation
-- Deployment-ready Next.js + Supabase + Vercel architecture
-
-Demo:
-<video link>
-
-Live app:
-<vercel link>
-
-GitHub:
-<repo link>
-```
-
----
-
-# X / Twitter Post
-
-```text
-Built OpsVerse for the Cerebras x Google DeepMind Gemma 4 Hackathon.
-
-It’s a multimodal incident swarm: upload a bug screenshot, logs, API JSON, and DB snapshot → Gemma 4 agents on Cerebras generate RCA, Jira bug, SQL checks, regression tests, and release decision in seconds.
-
-@Cerebras @googlegemma
-
-Demo:
-<link>
-```
-
----
-
 # Scoring Checklist
 
 ## Track 1
@@ -1679,19 +1487,6 @@ Demo:
 [x] Generates practical engineering outputs
 ```
 
-## Demo
-
-```text
-[x] Under 60 seconds
-[x] Shows speed
-[x] Shows workflow
-[x] No private data
-[x] Mentions Gemma 4 on Cerebras
-[x] Live URL works
-[x] GitHub README complete
-[x] Submission posts ready
-```
-
 ---
 
 # Final Build Priority
@@ -1707,8 +1502,6 @@ Build in this order:
 6. Speed metrics working
 7. Jira/tests/release output working
 8. Deploy
-9. Record
-10. Submit
 ```
 
 ---

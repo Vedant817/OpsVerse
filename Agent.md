@@ -297,18 +297,6 @@ Deployment is done only when:
 - No secrets are exposed.
 - README includes the live URL only after it is verified.
 
-## Demo Definition of Done
-
-Demo is done only when:
-
-- Video is under 60 seconds.
-- It shows the actual app.
-- It shows evidence loading.
-- It shows the agent swarm running.
-- It shows RCA, Jira bug, SQL checks, tests, release decision, and speed metrics.
-- It mentions Gemma 4 on Cerebras.
-- It uses only synthetic data.
-
 ## Communication Rules for Agents
 
 When reporting progress:
