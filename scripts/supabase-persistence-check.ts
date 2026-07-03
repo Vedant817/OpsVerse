@@ -47,10 +47,23 @@ type AgentRunRow = {
   created_at: string;
 };
 
+type SpeedBenchmarkRow = {
+  id: string;
+  incident_id: string | null;
+  provider: string;
+  model: string;
+  total_latency_ms: number;
+  total_tokens: number | null;
+  average_tokens_per_second: number | null;
+  agent_count: number;
+  created_at: string;
+};
+
 type IncidentDashboardRecord = {
   incident: IncidentRow;
   evidence: EvidenceRow[];
   agentRuns: AgentRunRow[];
+  speedBenchmarks: SpeedBenchmarkRow[];
 };
 
 const fixturePath = process.env.SUPABASE_PERSISTENCE_FIXTURE || "";
@@ -134,7 +147,12 @@ function recordFromFixture(): IncidentDashboardRecord {
     );
   }
 
-  return record as IncidentDashboardRecord;
+  return {
+    ...record,
+    speedBenchmarks: Array.isArray(record.speedBenchmarks)
+      ? record.speedBenchmarks
+      : [],
+  } as IncidentDashboardRecord;
 }
 
 function assertRoundTrip(
@@ -286,7 +304,12 @@ async function runLiveCheck() {
       fail(`Save verifier agent runs failed: ${runsInsert.error.message}`);
     }
 
-    const [incidentResult, evidenceResult, agentRunsResult] = await Promise.all([
+    const [
+      incidentResult,
+      evidenceResult,
+      agentRunsResult,
+      speedBenchmarksResult,
+    ] = await Promise.all([
       supabase.from("incidents").select("*").eq("id", incidentId).single(),
       supabase
         .from("incident_evidence")
@@ -298,6 +321,11 @@ async function runLiveCheck() {
         .select("*")
         .eq("incident_id", incidentId)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("speed_benchmarks")
+        .select("*")
+        .eq("incident_id", incidentId)
+        .order("created_at", { ascending: false }),
     ]);
 
     if (incidentResult.error || !incidentResult.data) {
@@ -309,12 +337,20 @@ async function runLiveCheck() {
     if (agentRunsResult.error || !agentRunsResult.data) {
       fail(`Reload verifier agent runs failed: ${agentRunsResult.error?.message ?? "missing rows"}`);
     }
+    if (speedBenchmarksResult.error || !speedBenchmarksResult.data) {
+      fail(
+        `Reload verifier speed benchmarks failed: ${
+          speedBenchmarksResult.error?.message ?? "missing rows"
+        }`,
+      );
+    }
 
     assertRoundTrip(
       {
         incident: incidentResult.data as IncidentRow,
         evidence: evidenceResult.data as EvidenceRow[],
         agentRuns: agentRunsResult.data as AgentRunRow[],
+        speedBenchmarks: speedBenchmarksResult.data as SpeedBenchmarkRow[],
       },
       expectedPackage,
     );

@@ -24,6 +24,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
       timeStyle: "short",
       timeZone: "UTC",
     }).format(new Date(record.incident.created_at));
+    const latestBenchmark = record.speedBenchmarks[0] ?? null;
 
     return (
       <main className="min-h-screen bg-[#f7f7f2] text-[#161616]">
@@ -42,7 +43,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
               Persisted incident `{id}` loaded from Supabase. The panels below
               render saved evidence and saved agent outputs only.
             </p>
-            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-4">
+            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-5">
               <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
                 <dt className="text-xs font-semibold uppercase text-[#a9a695]">
                   Status
@@ -70,6 +71,18 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
                   Created
                 </dt>
                 <dd className="mt-1 font-mono">{createdAt} UTC</dd>
+              </div>
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Benchmark
+                </dt>
+                <dd className="mt-1 font-mono">
+                  {latestBenchmark
+                    ? `${latestBenchmark.total_latency_ms}ms / ${
+                        latestBenchmark.total_tokens ?? 0
+                      } tokens`
+                    : "not saved"}
+                </dd>
               </div>
             </dl>
           </div>

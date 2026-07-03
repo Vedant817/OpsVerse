@@ -153,6 +153,7 @@ const dashboardRecord: IncidentDashboardRecord = {
       created_at: "2026-06-29T10:02:00.000Z",
     },
   ],
+  speedBenchmarks: [],
   agentRuns: [
     agentRunRow("intake_agent", "complete", outputs.intake, {
       latency_ms: 12,

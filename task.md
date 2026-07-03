@@ -239,6 +239,7 @@ Verification note:
 
 - Added lazy server-only Supabase admin client in `src/lib/db/supabase.ts`.
 - Added `src/lib/db/queries.ts` functions for incident creation, evidence saving, agent-run saving, full incident loading, incident evidence reconstruction, and speed benchmark saving.
+- Full incident loading now also retrieves saved `speed_benchmarks` rows, so aggregate Cerebras speed data is not write-only after persistence.
 - Extracted dashboard record reconstruction into `src/lib/dashboard/record.ts` so the server dashboard page and tests use the same package-building path.
 - No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
 - Added opt-in local deterministic agent mode through `OPSVERSE_LOCAL_AGENT_MODE=enabled`. It runs the same API/UI package path, is labeled as `local_demo`, derives outputs from submitted evidence, stores no provider metrics, and is documented as not live Gemma/Cerebras execution.
@@ -251,6 +252,7 @@ Verification note:
 - `npm run verify:supabase` is now the live acceptance gate for dashboard refresh persistence. It should be run after applying `supabase/schema.sql` and exporting `NEXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY`.
 - After adding persisted incident lifecycle status updates, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 - After hardening fatal route errors to mark persisted incidents `failed`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
+- After loading saved speed benchmark rows into the persisted dashboard/API path, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 
 ---
 
@@ -469,6 +471,7 @@ Verification note:
 - The intake flow renders the same result tabs directly from the `/api/agents/run` response.
 - `/dashboard/[id]` loads persisted evidence and saved agent runs from Supabase when configured; when Supabase is missing it shows a visible dashboard error instead of fake stored output.
 - `/dashboard/[id]` now renders a persisted operational summary from the loaded Supabase row: incident status, module, saved agent-run count, and created time.
+- The persisted dashboard operational summary now shows the latest saved speed benchmark latency/token aggregate when one exists.
 - Refresh persistence is build-verified but not live-verified because valid Supabase env values are not configured in this environment.
 - `tests/dashboard-record.test.ts` verifies the same reconstruction used by `/dashboard/[id]` preserves persisted evidence, saved outputs, failed runs, metrics, and `time_info` after a simulated refresh.
 - HTTP smoke verified `/dashboard/00000000-0000-0000-0000-000000000000` renders `Dashboard unavailable` with the Supabase configuration error when persistence is not configured.

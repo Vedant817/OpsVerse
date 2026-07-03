@@ -42,6 +42,7 @@ export async function GET(request: Request) {
   try {
     const record = await loadFullIncidentDashboard(incidentId);
     const result = dashboardRecordToFinalPackage(record);
+    const latestBenchmark = record.speedBenchmarks[0] ?? null;
 
     return NextResponse.json(
       {
@@ -56,6 +57,19 @@ export async function GET(request: Request) {
         },
         evidence_count: record.evidence.length,
         saved_agent_run_count: record.agentRuns.length,
+        speed_benchmark_count: record.speedBenchmarks.length,
+        latest_speed_benchmark: latestBenchmark
+          ? {
+              provider: latestBenchmark.provider,
+              model: latestBenchmark.model,
+              total_latency_ms: latestBenchmark.total_latency_ms,
+              total_tokens: latestBenchmark.total_tokens,
+              average_tokens_per_second:
+                latestBenchmark.average_tokens_per_second,
+              agent_count: latestBenchmark.agent_count,
+              created_at: latestBenchmark.created_at,
+            }
+          : null,
         result,
       },
       {

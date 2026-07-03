@@ -41,10 +41,23 @@ export type AgentRunRow = {
   created_at: string;
 };
 
+export type SpeedBenchmarkRow = {
+  id: string;
+  incident_id: string | null;
+  provider: string;
+  model: string;
+  total_latency_ms: number;
+  total_tokens: number | null;
+  average_tokens_per_second: number | null;
+  agent_count: number;
+  created_at: string;
+};
+
 export type IncidentDashboardRecord = {
   incident: IncidentRow;
   evidence: EvidenceRow[];
   agentRuns: AgentRunRow[];
+  speedBenchmarks: SpeedBenchmarkRow[];
 };
 
 export class DatabaseQueryError extends Error {
@@ -292,7 +305,12 @@ export async function loadFullIncidentDashboard(
   incidentId: string,
 ): Promise<IncidentDashboardRecord> {
   const supabase = getSupabaseAdminClient();
-  const [incidentResult, evidenceResult, agentRunsResult] = await Promise.all([
+  const [
+    incidentResult,
+    evidenceResult,
+    agentRunsResult,
+    speedBenchmarksResult,
+  ] = await Promise.all([
     supabase.from("incidents").select("*").eq("id", incidentId).single(),
     supabase
       .from("incident_evidence")
@@ -304,16 +322,23 @@ export async function loadFullIncidentDashboard(
       .select("*")
       .eq("incident_id", incidentId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("speed_benchmarks")
+      .select("*")
+      .eq("incident_id", incidentId)
+      .order("created_at", { ascending: false }),
   ]);
 
   assertNoDatabaseError(incidentResult.error, "Load incident");
   assertNoDatabaseError(evidenceResult.error, "Load incident evidence");
   assertNoDatabaseError(agentRunsResult.error, "Load agent runs");
+  assertNoDatabaseError(speedBenchmarksResult.error, "Load speed benchmarks");
 
   return {
     incident: incidentResult.data as IncidentRow,
     evidence: (evidenceResult.data ?? []) as EvidenceRow[],
     agentRuns: (agentRunsResult.data ?? []) as AgentRunRow[],
+    speedBenchmarks: (speedBenchmarksResult.data ?? []) as SpeedBenchmarkRow[],
   };
 }
 

@@ -31,6 +31,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Evaluate completed incident packages with output quality gates for RCA, screenshot understanding, reproduction steps, SQL, API tests, release risk, and primary demo alignment.
 - Persist incidents/evidence/agent runs when Supabase is configured.
 - Persist completed and failed agent rows as each agent finishes when Supabase is configured.
+- Reload saved speed benchmark rows with persisted incident dashboards and incident API responses.
 - Update persisted incident status through `running`, `completed`, and `failed` lifecycle states when Supabase is configured, including best-effort `failed` status on fatal route errors.
 - Load persisted incident packages through `GET /api/incidents?id=<incident-id>` using the same reconstruction path as `/dashboard/[id]`.
 - Show post-run dashboard persistence state, saved agent-row count, saved benchmark state, and the exact durable dashboard URL with copy/open actions when Supabase returns one.
