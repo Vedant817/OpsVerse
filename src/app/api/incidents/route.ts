@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { incidentEvidenceSchema } from "@/lib/cerebras/schemas";
 import { isEnvConfigError } from "@/lib/env";
-import { createIncidentWithEvidence, DatabaseQueryError } from "@/lib/db/queries";
+import { dashboardRecordToFinalPackage } from "@/lib/dashboard/package";
+import {
+  createIncidentWithEvidence,
+  DatabaseQueryError,
+  loadFullIncidentDashboard,
+} from "@/lib/db/queries";
 import {
   ImageValidationError,
   validateIncidentImageEvidence,
@@ -18,6 +23,78 @@ function isZodLikeError(error: unknown): error is {
     "issues" in error &&
     Array.isArray((error as { issues?: unknown }).issues)
   );
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const incidentId = url.searchParams.get("id")?.trim();
+
+  if (!incidentId) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Incident id is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const record = await loadFullIncidentDashboard(incidentId);
+    const result = dashboardRecordToFinalPackage(record);
+
+    return NextResponse.json(
+      {
+        ok: true,
+        incident: {
+          id: record.incident.id,
+          title: record.incident.title,
+          module: record.incident.module,
+          status: record.incident.status,
+          severity: record.incident.severity,
+          created_at: record.incident.created_at,
+        },
+        evidence_count: record.evidence.length,
+        saved_agent_run_count: record.agentRuns.length,
+        result,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  } catch (error) {
+    if (isEnvConfigError(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          missing: error.missing,
+        },
+        { status: 503 },
+      );
+    }
+
+    if (error instanceof DatabaseQueryError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          detail: error.causeDetail,
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Incident load failed.",
+      },
+      { status: 502 },
+    );
+  }
 }
 
 export async function POST(request: Request) {

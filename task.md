@@ -1007,9 +1007,11 @@ Acceptance criteria:
 Verification note:
 
 - Added `POST /api/incidents` with Zod validation and server-only Supabase persistence.
+- Added `GET /api/incidents?id=<incident-id>` to load a persisted incident through the same Supabase dashboard reconstruction path used by `/dashboard/[id]`.
 - Invalid JSON and invalid evidence payloads return HTTP 400 with useful details.
 - Missing Supabase configuration returns HTTP 503; live creation is blocked until valid Supabase env values are provided.
-- Verified over HTTP: malformed JSON returned 400, `{ "title": "x" }` returned 400 with missing field issues, and a valid sample payload returned 503 listing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- Verified over HTTP: malformed JSON returned 400, `{ "title": "x" }` returned 400 with missing field issues, missing GET id returned 400, GET with an id returned 503 listing missing Supabase env fields, and a valid sample payload returned 503 listing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- After adding the persisted incident GET API route, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, `npm run verify:ui`, and local HTTP smoke for missing-id/missing-Supabase GET responses passed without API-key-required checks.
 
 ### 11.2 Agent Run Route
 
