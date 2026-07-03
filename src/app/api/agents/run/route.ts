@@ -70,8 +70,25 @@ function databaseErrorResponse(error: DatabaseQueryError, persistence: Persisten
   );
 }
 
+async function markFailedAfterFatalError(persistence: PersistenceState | null) {
+  if (!persistence?.enabled || !persistence.incident_id) {
+    return null;
+  }
+
+  try {
+    await updateIncidentStatus(persistence.incident_id, "failed");
+    return null;
+  } catch (error) {
+    return error instanceof DatabaseQueryError
+      ? (error.causeDetail ?? error.message)
+      : errorMessage(error);
+  }
+}
+
 export async function POST(request: Request) {
   let body: unknown;
+
+  let activePersistence: PersistenceState | null = null;
 
   try {
     body = await request.json();
@@ -97,6 +114,7 @@ export async function POST(request: Request) {
       saved_speed_benchmark: false,
       error: null,
     };
+    activePersistence = persistence;
     const incident = requestedIncidentId
       ? await loadIncidentEvidence(requestedIncidentId)
       : incidentEvidenceSchema.parse(body);
@@ -217,11 +235,14 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
+    const persistenceStatusError = await markFailedAfterFatalError(activePersistence);
+
     if (isZodLikeError(error)) {
       return NextResponse.json(
         {
           ok: false,
           error: "Invalid incident evidence payload.",
+          persistence_status_error: persistenceStatusError,
           issues: error.issues.map((issue) => ({
             path: issue.path.join("."),
             message: issue.message,
@@ -237,6 +258,7 @@ export async function POST(request: Request) {
           ok: false,
           error: error.message,
           missing: error.missing,
+          persistence_status_error: persistenceStatusError,
         },
         { status: 503 },
       );
@@ -247,6 +269,7 @@ export async function POST(request: Request) {
         {
           ok: false,
           error: error.message,
+          persistence_status_error: persistenceStatusError,
         },
         { status: 400 },
       );
@@ -258,6 +281,7 @@ export async function POST(request: Request) {
           ok: false,
           error: error.message,
           detail: error.causeDetail,
+          persistence_status_error: persistenceStatusError,
         },
         { status: 502 },
       );
@@ -268,6 +292,7 @@ export async function POST(request: Request) {
         ok: false,
         error: "Incident swarm failed.",
         detail: errorMessage(error),
+        persistence_status_error: persistenceStatusError,
       },
       { status: 502 },
     );

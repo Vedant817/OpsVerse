@@ -64,6 +64,21 @@ function isZodLikeError(error: unknown): error is {
   );
 }
 
+async function markFailedAfterFatalError(persistence: PersistenceState | null) {
+  if (!persistence?.enabled || !persistence.incident_id) {
+    return null;
+  }
+
+  try {
+    await updateIncidentStatus(persistence.incident_id, "failed");
+    return null;
+  } catch (error) {
+    return error instanceof DatabaseQueryError
+      ? (error.causeDetail ?? error.message)
+      : errorMessage(error);
+  }
+}
+
 async function persistFinalResult(
   result: FinalIncidentPackage,
   persistence: PersistenceState,
@@ -160,6 +175,7 @@ export async function POST(request: Request) {
           );
         }
       }, 10_000);
+      let activePersistence: PersistenceState | null = null;
 
       try {
         const existingIncidentRequest = existingIncidentRequestSchema.parse(body);
@@ -175,6 +191,7 @@ export async function POST(request: Request) {
           saved_speed_benchmark: false,
           error: null,
         };
+        activePersistence = persistence;
         const incident = requestedIncidentId
           ? await loadIncidentEvidence(requestedIncidentId)
           : incidentEvidenceSchema.parse(body);
@@ -234,10 +251,14 @@ export async function POST(request: Request) {
           result: parsedResult,
         });
       } catch (error) {
+        const persistenceStatusError =
+          await markFailedAfterFatalError(activePersistence);
+
         if (isZodLikeError(error)) {
           send("swarm_error", {
             type: "swarm_error",
             error: "Invalid incident evidence payload.",
+            persistence_status_error: persistenceStatusError,
             issues: error.issues.map((issue) => ({
               path: issue.path.join("."),
               message: issue.message,
@@ -248,23 +269,27 @@ export async function POST(request: Request) {
             type: "swarm_error",
             error: error.message,
             missing: error.missing,
+            persistence_status_error: persistenceStatusError,
           });
         } else if (error instanceof ImageValidationError) {
           send("swarm_error", {
             type: "swarm_error",
             error: error.message,
+            persistence_status_error: persistenceStatusError,
           });
         } else if (error instanceof DatabaseQueryError) {
           send("swarm_error", {
             type: "swarm_error",
             error: error.message,
             detail: error.causeDetail,
+            persistence_status_error: persistenceStatusError,
           });
         } else {
           send("swarm_error", {
             type: "swarm_error",
             error: "Incident swarm failed.",
             detail: errorMessage(error),
+            persistence_status_error: persistenceStatusError,
           });
         }
       } finally {
