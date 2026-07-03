@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,10 +30,21 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForDevToolsPort(userDataDir) {
+async function waitForDevToolsPort(userDataDir, chromeState) {
   const portFile = join(userDataDir, "DevToolsActivePort");
 
   for (let attempt = 0; attempt < 80; attempt += 1) {
+    if (chromeState.exited) {
+      throw new Error(
+        [
+          `Chrome exited before exposing a DevTools port with code ${chromeState.code ?? "unknown"}.`,
+          chromeState.stderr.trim()
+            ? `stderr: ${chromeState.stderr.trim().slice(-1200)}`
+            : "stderr: empty",
+        ].join(" "),
+      );
+    }
+
     try {
       const [port] = readFileSync(portFile, "utf8").trim().split("\n");
       if (port) return port;
@@ -42,7 +53,14 @@ async function waitForDevToolsPort(userDataDir) {
     }
   }
 
-  throw new Error("Chrome did not expose a DevTools port.");
+  throw new Error(
+    [
+      "Chrome did not expose a DevTools port before timeout.",
+      chromeState.stderr.trim()
+        ? `stderr: ${chromeState.stderr.trim().slice(-1200)}`
+        : "stderr: empty",
+    ].join(" "),
+  );
 }
 
 async function httpJson(url) {
@@ -190,7 +208,18 @@ async function verifyPage(cdp, { path, expectedText }, viewport) {
 }
 
 async function main() {
+  if (!existsSync(chromePath)) {
+    throw new Error(
+      `Chrome executable was not found at ${chromePath}. Set CHROME_PATH to a local Chrome or Chromium binary.`,
+    );
+  }
+
   const userDataDir = mkdtempSync(join(tmpdir(), "opsverse-chrome-"));
+  const chromeState = {
+    exited: false,
+    code: null,
+    stderr: "",
+  };
   const chrome = spawn(chromePath, [
     "--headless=new",
     "--disable-gpu",
@@ -204,8 +233,15 @@ async function main() {
   ]);
 
   try {
-    chrome.stderr.on("data", () => {});
-    const port = await waitForDevToolsPort(userDataDir);
+    chrome.stderr.on("data", (chunk) => {
+      chromeState.stderr += String(chunk);
+      chromeState.stderr = chromeState.stderr.slice(-4000);
+    });
+    chrome.on("exit", (code) => {
+      chromeState.exited = true;
+      chromeState.code = code;
+    });
+    const port = await waitForDevToolsPort(userDataDir, chromeState);
     const targets = await httpJson(`http://127.0.0.1:${port}/json/list`);
     const target = targets.find((candidate) => candidate.type === "page");
     if (!target) {

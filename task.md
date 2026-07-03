@@ -1350,7 +1350,7 @@ Verification note:
 - Added `tests/evidence-chat.test.ts` covering grounded root-cause answers, SQL answers, unsupported-question refusal, and exported supported prompts.
 - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed after the Ask tab slice. Build, audit, dev server, and browser smoke required unsandboxed execution because the managed sandbox blocks port binding/network/Chrome DevTools.
 - `npm run verify:ui` passed again for desktop and mobile `/` and `/incident` after all stretch tabs were present, confirming the primary demo pages still load without console/runtime errors or document-level horizontal overflow.
-- Verified stretch integration wording stays honest: the PR Diff tab says no GitHub API integration is claimed, the Runbook tab says it is not a live vector database, Gemini baseline comparison is opt-in and reports disabled or missing config until configured, and demo/submission docs keep verified-link placeholders until public links exist.
+- Verified stretch integration wording stays honest: the PR Diff tab says no live GitHub API integration is claimed, the Runbook tab says it is not a live vector database, Gemini baseline comparison is opt-in and reports disabled or missing config until configured, and narrator/submission UI avoids claiming live app or optional demo video links before those artifacts exist.
 
 ---
 
@@ -1436,6 +1436,7 @@ Verification note:
 - After removing the stale `verify:submission` deployment-readiness requirement and accepting the configured GitHub remote as GitHub provenance, `node --import tsx --test tests/deployment-readiness.test.ts` passed with 6 tests. `npm run verify:deployment` now passes git identity, git remote, GitHub provenance, Vercel config, package scripts, `.env.example`, Supabase schema, ignore rules, and tracked secret hygiene; it fails only because the Vercel CLI is not installed/authenticated, which remains an external deployment blocker.
 - Current blockers: Vercel deployment is not performed, `vercel` is not installed/authenticated, live Supabase env values are not configured, and direct Vision image transport is still partial because the provider returned HTTP 400 for the tiny PNG probe. The primary live swarm completes through an explicitly labeled submitted-notes fallback.
 - Current tracked files and README were checked for obvious private secret values; the old exposed Cerebras key must still be rotated before public release because it appeared during local work.
+- Hardened `scripts/browser-smoke.mjs` to fail with actionable Chrome diagnostics if the configured Chrome binary is missing, exits early, or never exposes a DevTools port. `UI_SMOKE_BASE_URL=http://127.0.0.1:3005 npm run verify:ui` then passed for desktop and mobile `/` and `/incident`.
 
 ---
 
@@ -1516,6 +1517,6 @@ Verification note:
 - [ ] Add a short verification note under the completed task when useful.
 - [ ] Commit related code and task updates together.
 - [ ] Keep commits small and reviewable.
-- [ ] Do not mark deployment/demo/submission items done until the live evidence exists.
+- [ ] Do not mark deployment, live-link, or optional public-promo items done until the live evidence exists.
 - [x] Do not let generated sample outputs hide failed real model calls.
 - [~] Preserve the core demo path: sample incident -> swarm -> RCA/tests/Jira/release/speed metrics.
