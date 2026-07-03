@@ -35,6 +35,7 @@ const schemaSql = `
 create table if not exists incidents (id uuid primary key);
 create table if not exists incident_evidence (id uuid primary key);
 create table if not exists agent_runs (id uuid primary key);
+create table if not exists agent_events (id uuid primary key);
 create table if not exists speed_benchmarks (id uuid primary key);
 create table if not exists demo_sessions (id uuid primary key);
 `;

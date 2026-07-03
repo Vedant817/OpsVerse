@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { runIncidentSwarmWithEvents } from "@/lib/agents/orchestrator";
+import {
+  runIncidentSwarmWithEvents,
+  type SwarmStreamEvent,
+} from "@/lib/agents/orchestrator";
 import {
   ImageValidationError,
   validateIncidentImageEvidence,
@@ -14,6 +17,7 @@ import {
   DatabaseQueryError,
   createIncidentWithEvidence,
   loadIncidentEvidence,
+  saveAgentEvent,
   saveAgentRun,
   saveSpeedBenchmarkData,
   updateIncidentStatus,
@@ -41,6 +45,8 @@ type PersistenceState = {
   incident_id: string | null;
   saved_agent_runs: boolean;
   saved_agent_run_count: number;
+  saved_agent_events: boolean;
+  saved_agent_event_count: number;
   saved_speed_benchmark: boolean;
   error: string | null;
 };
@@ -79,6 +85,24 @@ async function markFailedAfterFatalError(persistence: PersistenceState | null) {
   }
 }
 
+function agentEventPayload(event: SwarmStreamEvent) {
+  if (event.type === "agent_started") {
+    return {
+      event_type: event.type,
+      agent_name: event.agent_name,
+      run_status: "running",
+      payload: event,
+    };
+  }
+
+  return {
+    event_type: event.type,
+    agent_name: event.run.agent_name,
+    run_status: event.run.status,
+    payload: event,
+  };
+}
+
 async function persistFinalResult(
   result: FinalIncidentPackage,
   persistence: PersistenceState,
@@ -100,6 +124,8 @@ async function persistFinalResult(
       throw new DatabaseQueryError("Save agent runs failed.", persistence.error);
     }
 
+    persistence.saved_agent_events =
+      persistence.saved_agent_event_count > 0 && !persistence.error;
     persistence.saved_agent_runs =
       persistence.saved_agent_run_count === result.agent_runs.length &&
       result.agent_runs.length > 0;
@@ -188,6 +214,8 @@ export async function POST(request: Request) {
           incident_id: requestedIncidentId,
           saved_agent_runs: false,
           saved_agent_run_count: 0,
+          saved_agent_events: false,
+          saved_agent_event_count: 0,
           saved_speed_benchmark: false,
           error: null,
         };
@@ -210,6 +238,33 @@ export async function POST(request: Request) {
           incidentId: persistence.incident_id,
           async onEvent(event) {
             send(event.type, event);
+
+            if (
+              persistence.enabled &&
+              persistence.incident_id &&
+              !persistence.error
+            ) {
+              try {
+                await saveAgentEvent(
+                  persistence.incident_id,
+                  agentEventPayload(event),
+                );
+                persistence.saved_agent_event_count += 1;
+              } catch (error) {
+                if (error instanceof DatabaseQueryError) {
+                  persistence.error = error.causeDetail ?? error.message;
+                  send("persistence_error", {
+                    type: "persistence_error",
+                    error: "Agent event persistence failed.",
+                    detail: persistence.error,
+                    persistence,
+                  });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
             if (event.type === "agent_completed") {
               const metricsEvent = metricsUpdatedStreamEvent(event.run);
               if (metricsEvent) {

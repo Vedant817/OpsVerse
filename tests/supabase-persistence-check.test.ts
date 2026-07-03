@@ -75,6 +75,35 @@ function agentRunRows(incidentId: string, runs: AgentRun[], now: string) {
   }));
 }
 
+function agentEventRows(incidentId: string, runs: AgentRun[], now: string) {
+  return runs.flatMap((run, index) => [
+    {
+      id: randomUUID(),
+      incident_id: incidentId,
+      event_type: "agent_started",
+      agent_name: run.agent_name,
+      run_status: "running",
+      payload: {
+        type: "agent_started",
+        agent_name: run.agent_name,
+      },
+      created_at: new Date(Date.parse(now) + index * 2).toISOString(),
+    },
+    {
+      id: randomUUID(),
+      incident_id: incidentId,
+      event_type: "agent_completed",
+      agent_name: run.agent_name,
+      run_status: run.status,
+      payload: {
+        type: "agent_completed",
+        run,
+      },
+      created_at: new Date(Date.parse(now) + index * 2 + 1).toISOString(),
+    },
+  ]);
+}
+
 function completeRecord() {
   const now = "2026-07-01T00:00:00.000Z";
   const incidentId = randomUUID();
@@ -92,6 +121,7 @@ function completeRecord() {
     },
     evidence: evidenceRows(incidentId, source, now),
     agentRuns: agentRunRows(incidentId, finalPackage.agent_runs, now),
+    agentEvents: agentEventRows(incidentId, finalPackage.agent_runs, now),
   };
 }
 
@@ -119,7 +149,7 @@ test("supabase persistence verifier passes for a complete dashboard fixture", ()
   });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /PASS Dashboard reconstruction - 9 agent runs/);
+  assert.match(result.stdout, /PASS Dashboard reconstruction - 9 agent runs, 18 agent events/);
   assert.match(result.stdout, /Supabase persistence fixture verification passed/);
 });
 

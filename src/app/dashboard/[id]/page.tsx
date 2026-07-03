@@ -43,7 +43,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
               Persisted incident `{id}` loaded from Supabase. The panels below
               render saved evidence and saved agent outputs only.
             </p>
-            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-5">
+            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-6">
               <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
                 <dt className="text-xs font-semibold uppercase text-[#a9a695]">
                   Status
@@ -65,6 +65,12 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
                   Saved runs
                 </dt>
                 <dd className="mt-1 font-mono">{record.agentRuns.length}</dd>
+              </div>
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Events
+                </dt>
+                <dd className="mt-1 font-mono">{record.agentEvents.length}</dd>
               </div>
               <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
                 <dt className="text-xs font-semibold uppercase text-[#a9a695]">

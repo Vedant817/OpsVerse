@@ -28,6 +28,7 @@ const requiredTables = [
   "incidents",
   "incident_evidence",
   "agent_runs",
+  "agent_events",
   "speed_benchmarks",
   "demo_sessions",
 ];

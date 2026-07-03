@@ -6,11 +6,15 @@ import {
   isEnvConfigError,
   isSupabasePersistenceConfigured,
 } from "@/lib/env";
-import { runIncidentSwarmWithEvents } from "@/lib/agents/orchestrator";
+import {
+  runIncidentSwarmWithEvents,
+  type SwarmStreamEvent,
+} from "@/lib/agents/orchestrator";
 import {
   createIncidentWithEvidence,
   DatabaseQueryError,
   loadIncidentEvidence,
+  saveAgentEvent,
   saveAgentRun,
   saveSpeedBenchmarkData,
   updateIncidentStatus,
@@ -32,6 +36,8 @@ type PersistenceState = {
   incident_id: string | null;
   saved_agent_runs: boolean;
   saved_agent_run_count: number;
+  saved_agent_events: boolean;
+  saved_agent_event_count: number;
   saved_speed_benchmark: boolean;
   error: string | null;
 };
@@ -85,6 +91,24 @@ async function markFailedAfterFatalError(persistence: PersistenceState | null) {
   }
 }
 
+function agentEventPayload(event: SwarmStreamEvent) {
+  if (event.type === "agent_started") {
+    return {
+      event_type: event.type,
+      agent_name: event.agent_name,
+      run_status: "running",
+      payload: event,
+    };
+  }
+
+  return {
+    event_type: event.type,
+    agent_name: event.run.agent_name,
+    run_status: event.run.status,
+    payload: event,
+  };
+}
+
 export async function POST(request: Request) {
   let body: unknown;
 
@@ -111,6 +135,8 @@ export async function POST(request: Request) {
       incident_id: requestedIncidentId,
       saved_agent_runs: false,
       saved_agent_run_count: 0,
+      saved_agent_events: false,
+      saved_agent_event_count: 0,
       saved_speed_benchmark: false,
       error: null,
     };
@@ -148,6 +174,23 @@ export async function POST(request: Request) {
     const result = await runIncidentSwarmWithEvents(incident, {
       incidentId: persistence.incident_id,
       async onEvent(event) {
+        if (persistence.enabled && persistence.incident_id && !persistence.error) {
+          try {
+            await saveAgentEvent(
+              persistence.incident_id,
+              agentEventPayload(event),
+            );
+            persistence.saved_agent_event_count += 1;
+          } catch (error) {
+            if (error instanceof DatabaseQueryError) {
+              persistence.error = error.causeDetail ?? error.message;
+              return;
+            }
+
+            throw error;
+          }
+        }
+
         if (
           event.type !== "agent_completed" ||
           !persistence.enabled ||
@@ -171,6 +214,8 @@ export async function POST(request: Request) {
       },
     });
     const completed = result.agent_runs.every((run) => run.status === "complete");
+    persistence.saved_agent_events =
+      persistence.saved_agent_event_count > 0 && !persistence.error;
     persistence.saved_agent_runs =
       persistence.saved_agent_run_count === result.agent_runs.length &&
       result.agent_runs.length > 0;

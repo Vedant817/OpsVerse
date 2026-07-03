@@ -56,7 +56,7 @@ export default async function DashboardIndexPage() {
                     {item.incident.created_at}
                   </p>
                 </div>
-                <dl className="grid grid-cols-3 gap-2 text-xs md:min-w-80">
+                <dl className="grid grid-cols-4 gap-2 text-xs md:min-w-[26rem]">
                   <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">
                     <dt className="font-semibold text-[#625d52]">Status</dt>
                     <dd className="mt-1 font-mono text-[#111111]">
@@ -67,6 +67,12 @@ export default async function DashboardIndexPage() {
                     <dt className="font-semibold text-[#625d52]">Runs</dt>
                     <dd className="mt-1 font-mono text-[#111111]">
                       {item.agent_run_count}
+                    </dd>
+                  </div>
+                  <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">
+                    <dt className="font-semibold text-[#625d52]">Events</dt>
+                    <dd className="mt-1 font-mono text-[#111111]">
+                      {item.agent_event_count}
                     </dd>
                   </div>
                   <div className="rounded border border-[#e2decf] bg-[#fbfaf5] p-3">

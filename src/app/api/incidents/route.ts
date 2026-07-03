@@ -52,6 +52,7 @@ export async function GET(request: Request) {
         },
         evidence_count: record.evidence.length,
         saved_agent_run_count: record.agentRuns.length,
+        saved_agent_event_count: record.agentEvents.length,
         speed_benchmark_count: record.speedBenchmarks.length,
         latest_speed_benchmark: latestBenchmark
           ? {
@@ -135,6 +136,7 @@ async function listIncidents(url: URL) {
           created_at: item.incident.created_at,
           evidence_count: item.evidence_count,
           saved_agent_run_count: item.agent_run_count,
+          saved_agent_event_count: item.agent_event_count,
           speed_benchmark_count: item.speed_benchmark_count,
           dashboard_url: `/dashboard/${item.incident.id}`,
         })),

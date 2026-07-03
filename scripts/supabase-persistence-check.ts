@@ -47,6 +47,16 @@ type AgentRunRow = {
   created_at: string;
 };
 
+type AgentEventRow = {
+  id: string;
+  incident_id: string;
+  event_type: string;
+  agent_name: string | null;
+  run_status: string | null;
+  payload: unknown;
+  created_at: string;
+};
+
 type SpeedBenchmarkRow = {
   id: string;
   incident_id: string | null;
@@ -63,6 +73,7 @@ type IncidentDashboardRecord = {
   incident: IncidentRow;
   evidence: EvidenceRow[];
   agentRuns: AgentRunRow[];
+  agentEvents: AgentEventRow[];
   speedBenchmarks: SpeedBenchmarkRow[];
 };
 
@@ -135,6 +146,31 @@ function agentRunRows(incidentId: string, runs: AgentRun[]) {
   }));
 }
 
+function agentEventRows(incidentId: string, runs: AgentRun[]) {
+  return runs.flatMap((run) => [
+    {
+      incident_id: incidentId,
+      event_type: "agent_started",
+      agent_name: run.agent_name,
+      run_status: "running",
+      payload: {
+        type: "agent_started",
+        agent_name: run.agent_name,
+      },
+    },
+    {
+      incident_id: incidentId,
+      event_type: "agent_completed",
+      agent_name: run.agent_name,
+      run_status: run.status,
+      payload: {
+        type: "agent_completed",
+        run,
+      },
+    },
+  ]);
+}
+
 function recordFromFixture(): IncidentDashboardRecord {
   const payload = JSON.parse(readFileSync(fixturePath, "utf8")) as
     | IncidentDashboardRecord
@@ -149,6 +185,9 @@ function recordFromFixture(): IncidentDashboardRecord {
 
   return {
     ...record,
+    agentEvents: Array.isArray(record.agentEvents)
+      ? record.agentEvents
+      : [],
     speedBenchmarks: Array.isArray(record.speedBenchmarks)
       ? record.speedBenchmarks
       : [],
@@ -184,6 +223,12 @@ function assertRoundTrip(
   if (reconstructed.agent_runs.length < requiredOutputs.length) {
     fail(
       `Reconstructed dashboard package has ${reconstructed.agent_runs.length} agent runs; expected at least ${requiredOutputs.length}.`,
+    );
+  }
+
+  if (record.agentEvents.length < reconstructed.agent_runs.length) {
+    fail(
+      `Reconstructed dashboard record has ${record.agentEvents.length} agent events; expected at least ${reconstructed.agent_runs.length}.`,
     );
   }
 
@@ -225,7 +270,9 @@ function assertRoundTrip(
     }
   }
 
-  console.log(`PASS Dashboard reconstruction - ${reconstructed.agent_runs.length} agent runs`);
+  console.log(
+    `PASS Dashboard reconstruction - ${reconstructed.agent_runs.length} agent runs, ${record.agentEvents.length} agent events`,
+  );
   console.log(
     `PASS Output quality - ${quality.pass} pass, ${quality.warn} warning(s), ${quality.block} blocker(s)`,
   );
@@ -304,10 +351,18 @@ async function runLiveCheck() {
       fail(`Save verifier agent runs failed: ${runsInsert.error.message}`);
     }
 
+    const eventsInsert = await supabase
+      .from("agent_events")
+      .insert(agentEventRows(incidentId, expectedPackage.agent_runs));
+    if (eventsInsert.error) {
+      fail(`Save verifier agent events failed: ${eventsInsert.error.message}`);
+    }
+
     const [
       incidentResult,
       evidenceResult,
       agentRunsResult,
+      agentEventsResult,
       speedBenchmarksResult,
     ] = await Promise.all([
       supabase.from("incidents").select("*").eq("id", incidentId).single(),
@@ -318,6 +373,11 @@ async function runLiveCheck() {
         .order("created_at", { ascending: false }),
       supabase
         .from("agent_runs")
+        .select("*")
+        .eq("incident_id", incidentId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("agent_events")
         .select("*")
         .eq("incident_id", incidentId)
         .order("created_at", { ascending: true }),
@@ -337,6 +397,9 @@ async function runLiveCheck() {
     if (agentRunsResult.error || !agentRunsResult.data) {
       fail(`Reload verifier agent runs failed: ${agentRunsResult.error?.message ?? "missing rows"}`);
     }
+    if (agentEventsResult.error || !agentEventsResult.data) {
+      fail(`Reload verifier agent events failed: ${agentEventsResult.error?.message ?? "missing rows"}`);
+    }
     if (speedBenchmarksResult.error || !speedBenchmarksResult.data) {
       fail(
         `Reload verifier speed benchmarks failed: ${
@@ -350,6 +413,7 @@ async function runLiveCheck() {
         incident: incidentResult.data as IncidentRow,
         evidence: evidenceResult.data as EvidenceRow[],
         agentRuns: agentRunsResult.data as AgentRunRow[],
+        agentEvents: agentEventsResult.data as AgentEventRow[],
         speedBenchmarks: speedBenchmarksResult.data as SpeedBenchmarkRow[],
       },
       expectedPackage,

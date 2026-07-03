@@ -53,6 +53,8 @@ type SwarmApiResponse = {
     incident_id: string | null;
     saved_agent_runs: boolean;
     saved_agent_run_count?: number;
+    saved_agent_events?: boolean;
+    saved_agent_event_count?: number;
     saved_speed_benchmark: boolean;
     error: string | null;
   };
@@ -696,6 +698,7 @@ function RunPersistencePanel({
     ? "border-[#b8d9d4] bg-[#effaf8] text-[#155e57]"
     : "border-[#ead18f] bg-[#fff9e6] text-[#725300]";
   const savedRows = persistence.saved_agent_run_count ?? 0;
+  const savedEvents = persistence.saved_agent_event_count ?? 0;
   const dashboardPath = hasDashboard
     ? `/dashboard/${persistence.incident_id}`
     : "";
@@ -748,7 +751,7 @@ function RunPersistencePanel({
         </div>
       ) : null}
 
-      <dl className="mt-3 grid gap-2 text-xs md:grid-cols-3">
+      <dl className="mt-3 grid gap-2 text-xs md:grid-cols-4">
         <div className="rounded border border-current/20 bg-white/60 p-3">
           <dt className="font-semibold">Incident id</dt>
           <dd className="mt-1 truncate font-mono">
@@ -760,6 +763,14 @@ function RunPersistencePanel({
           <dd className="mt-1 font-mono">
             {persistence.saved_agent_runs
               ? `${savedRows} saved`
+              : "not saved"}
+          </dd>
+        </div>
+        <div className="rounded border border-current/20 bg-white/60 p-3">
+          <dt className="font-semibold">Event audit</dt>
+          <dd className="mt-1 font-mono">
+            {persistence.saved_agent_events
+              ? `${savedEvents} saved`
               : "not saved"}
           </dd>
         </div>

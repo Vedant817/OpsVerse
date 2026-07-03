@@ -31,12 +31,13 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Evaluate completed incident packages with output quality gates for RCA, screenshot understanding, reproduction steps, SQL, API tests, release risk, and primary demo alignment.
 - Persist incidents/evidence/agent runs when Supabase is configured.
 - Persist completed and failed agent rows as each agent finishes when Supabase is configured.
+- Persist agent event audit rows for started/completed transitions when Supabase is configured.
 - Reload saved speed benchmark rows with persisted incident dashboards and incident API responses.
 - Update persisted incident status through `running`, `completed`, and `failed` lifecycle states when Supabase is configured, including best-effort `failed` status on fatal route errors.
 - List recent persisted incidents through `GET /api/incidents` and `/dashboard` when Supabase is configured.
 - Load persisted incident packages through `GET /api/incidents?id=<incident-id>` using the same reconstruction path as `/dashboard/[id]`.
-- Show post-run dashboard persistence state, saved agent-row count, saved benchmark state, and the exact durable dashboard URL with copy/open actions when Supabase returns one.
-- Render persisted dashboard status, module, saved run count, and created time from the loaded Supabase row.
+- Show post-run dashboard persistence state, saved agent-row count, saved event-audit count, saved benchmark state, and the exact durable dashboard URL with copy/open actions when Supabase returns one.
+- Render persisted dashboard status, module, saved run count, saved event count, and created time from the loaded Supabase row.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
 No static RCA/Jira/test/release answer is pasted into the app as if it came from AI. Sample data is synthetic and only seeds the same runtime path used by manual evidence.
@@ -186,7 +187,7 @@ Apply `supabase/schema.sql` to a Supabase project, then set:
 
 `SUPABASE_SERVICE_ROLE_KEY` is used only from server-only modules. If Supabase is missing, incident creation returns HTTP `503` and the dashboard shows a visible configuration error instead of pretending persistence worked.
 
-When Supabase is configured, both the JSON and streaming swarm routes create the incident/evidence record before execution and save each `agent_completed` row as the orchestrator emits it. The streaming route emits a `persistence_error` event if an agent row cannot be saved; the final response does not claim durable dashboard refresh when persistence failed.
+When Supabase is configured, both the JSON and streaming swarm routes create the incident/evidence record before execution, save `agent_started` / `agent_completed` audit events as the orchestrator emits them, and save each completed or failed agent row as it finishes. The streaming route emits a `persistence_error` event if an agent event or row cannot be saved; the final response does not claim durable dashboard refresh when persistence failed.
 
 After applying the schema and exporting the Supabase environment variables, run:
 

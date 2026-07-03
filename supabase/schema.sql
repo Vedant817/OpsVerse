@@ -34,6 +34,16 @@ create table if not exists public.agent_runs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.agent_events (
+  id uuid primary key default gen_random_uuid(),
+  incident_id uuid not null references public.incidents(id) on delete cascade,
+  event_type text not null,
+  agent_name text,
+  run_status text,
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.speed_benchmarks (
   id uuid primary key default gen_random_uuid(),
   incident_id uuid references public.incidents(id) on delete cascade,
@@ -72,6 +82,12 @@ create index if not exists agent_runs_incident_id_created_at_idx
 
 create index if not exists agent_runs_agent_name_idx
   on public.agent_runs (agent_name);
+
+create index if not exists agent_events_incident_id_created_at_idx
+  on public.agent_events (incident_id, created_at);
+
+create index if not exists agent_events_event_type_idx
+  on public.agent_events (event_type);
 
 create index if not exists speed_benchmarks_incident_id_idx
   on public.speed_benchmarks (incident_id, created_at desc);

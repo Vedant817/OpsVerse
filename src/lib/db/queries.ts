@@ -41,6 +41,16 @@ export type AgentRunRow = {
   created_at: string;
 };
 
+export type AgentEventRow = {
+  id: string;
+  incident_id: string;
+  event_type: string;
+  agent_name: string | null;
+  run_status: string | null;
+  payload: unknown;
+  created_at: string;
+};
+
 export type SpeedBenchmarkRow = {
   id: string;
   incident_id: string | null;
@@ -57,6 +67,7 @@ export type IncidentDashboardRecord = {
   incident: IncidentRow;
   evidence: EvidenceRow[];
   agentRuns: AgentRunRow[];
+  agentEvents: AgentEventRow[];
   speedBenchmarks: SpeedBenchmarkRow[];
 };
 
@@ -64,6 +75,7 @@ export type IncidentSummary = {
   incident: IncidentRow;
   evidence_count: number;
   agent_run_count: number;
+  agent_event_count: number;
   speed_benchmark_count: number;
 };
 
@@ -270,6 +282,27 @@ export async function saveAgentRun(incidentId: string, run: AgentRun) {
   assertNoDatabaseError(error, `Save ${run.agent_name} run`);
 }
 
+export async function saveAgentEvent(
+  incidentId: string,
+  event: {
+    event_type: string;
+    agent_name?: string | null;
+    run_status?: string | null;
+    payload?: unknown;
+  },
+) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase.from("agent_events").insert({
+    incident_id: incidentId,
+    event_type: event.event_type,
+    agent_name: event.agent_name ?? null,
+    run_status: event.run_status ?? null,
+    payload: event.payload ?? null,
+  });
+
+  assertNoDatabaseError(error, `Save ${event.event_type} event`);
+}
+
 export async function saveSpeedBenchmarkData(
   incidentId: string,
   finalPackage: FinalIncidentPackage,
@@ -316,6 +349,7 @@ export async function loadFullIncidentDashboard(
     incidentResult,
     evidenceResult,
     agentRunsResult,
+    agentEventsResult,
     speedBenchmarksResult,
   ] = await Promise.all([
     supabase.from("incidents").select("*").eq("id", incidentId).single(),
@@ -330,6 +364,11 @@ export async function loadFullIncidentDashboard(
       .eq("incident_id", incidentId)
       .order("created_at", { ascending: true }),
     supabase
+      .from("agent_events")
+      .select("*")
+      .eq("incident_id", incidentId)
+      .order("created_at", { ascending: true }),
+    supabase
       .from("speed_benchmarks")
       .select("*")
       .eq("incident_id", incidentId)
@@ -339,12 +378,14 @@ export async function loadFullIncidentDashboard(
   assertNoDatabaseError(incidentResult.error, "Load incident");
   assertNoDatabaseError(evidenceResult.error, "Load incident evidence");
   assertNoDatabaseError(agentRunsResult.error, "Load agent runs");
+  assertNoDatabaseError(agentEventsResult.error, "Load agent events");
   assertNoDatabaseError(speedBenchmarksResult.error, "Load speed benchmarks");
 
   return {
     incident: incidentResult.data as IncidentRow,
     evidence: (evidenceResult.data ?? []) as EvidenceRow[],
     agentRuns: (agentRunsResult.data ?? []) as AgentRunRow[],
+    agentEvents: (agentEventsResult.data ?? []) as AgentEventRow[],
     speedBenchmarks: (speedBenchmarksResult.data ?? []) as SpeedBenchmarkRow[],
   };
 }
@@ -364,7 +405,12 @@ export async function listIncidentSummaries(limit = 20): Promise<IncidentSummary
 
   return Promise.all(
     incidents.map(async (incident) => {
-      const [evidenceResult, agentRunsResult, speedBenchmarksResult] =
+      const [
+        evidenceResult,
+        agentRunsResult,
+        agentEventsResult,
+        speedBenchmarksResult,
+      ] =
         await Promise.all([
           supabase
             .from("incident_evidence")
@@ -372,6 +418,10 @@ export async function listIncidentSummaries(limit = 20): Promise<IncidentSummary
             .eq("incident_id", incident.id),
           supabase
             .from("agent_runs")
+            .select("id", { count: "exact", head: true })
+            .eq("incident_id", incident.id),
+          supabase
+            .from("agent_events")
             .select("id", { count: "exact", head: true })
             .eq("incident_id", incident.id),
           supabase
@@ -389,6 +439,10 @@ export async function listIncidentSummaries(limit = 20): Promise<IncidentSummary
         `Count agent runs for incident ${incident.id}`,
       );
       assertNoDatabaseError(
+        agentEventsResult.error,
+        `Count agent events for incident ${incident.id}`,
+      );
+      assertNoDatabaseError(
         speedBenchmarksResult.error,
         `Count speed benchmarks for incident ${incident.id}`,
       );
@@ -397,6 +451,7 @@ export async function listIncidentSummaries(limit = 20): Promise<IncidentSummary
         incident,
         evidence_count: evidenceResult.count ?? 0,
         agent_run_count: agentRunsResult.count ?? 0,
+        agent_event_count: agentEventsResult.count ?? 0,
         speed_benchmark_count: speedBenchmarksResult.count ?? 0,
       };
     }),

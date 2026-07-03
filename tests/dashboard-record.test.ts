@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { dashboardRecordToFinalPackage } from "../src/lib/dashboard/record";
-import type { AgentRunRow, IncidentDashboardRecord } from "../src/lib/db/queries";
+import type {
+  AgentEventRow,
+  AgentRunRow,
+  IncidentDashboardRecord,
+} from "../src/lib/db/queries";
 import { primaryIncidentSample } from "../src/lib/samples";
 
 const incidentId = "11111111-1111-4111-8111-111111111111";
@@ -58,6 +62,25 @@ function agentRunRow(
     time_info: metrics.time_info ?? null,
     output,
     error: status === "failed" ? "Agent failed in saved row" : null,
+    created_at: "2026-06-29T10:00:00.000Z",
+  };
+}
+
+function agentEventRow(
+  agentName: string,
+  eventType: "agent_started" | "agent_completed",
+  runStatus: string,
+): AgentEventRow {
+  return {
+    id: `${agentName}-${eventType}`,
+    incident_id: incidentId,
+    event_type: eventType,
+    agent_name: agentName,
+    run_status: runStatus,
+    payload: {
+      type: eventType,
+      agent_name: agentName,
+    },
     created_at: "2026-06-29T10:00:00.000Z",
   };
 }
@@ -154,6 +177,16 @@ const dashboardRecord: IncidentDashboardRecord = {
     },
   ],
   speedBenchmarks: [],
+  agentEvents: [
+    agentEventRow("intake_agent", "agent_started", "running"),
+    agentEventRow("intake_agent", "agent_completed", "complete"),
+    agentEventRow("log_agent", "agent_started", "running"),
+    agentEventRow("log_agent", "agent_completed", "complete"),
+    agentEventRow("api_agent", "agent_started", "running"),
+    agentEventRow("api_agent", "agent_completed", "failed"),
+    agentEventRow("release_agent", "agent_started", "running"),
+    agentEventRow("release_agent", "agent_completed", "complete"),
+  ],
   agentRuns: [
     agentRunRow("intake_agent", "complete", outputs.intake, {
       latency_ms: 12,

@@ -198,6 +198,14 @@ Verification note:
   - `tokens_per_second numeric`
   - `output jsonb`
   - `created_at timestamptz default now()`
+- [x] Create `agent_events` table for per-agent state-transition audit rows:
+  - `id uuid primary key default gen_random_uuid()`
+  - `incident_id uuid references incidents(id) on delete cascade`
+  - `event_type text not null`
+  - `agent_name text`
+  - `run_status text`
+  - `payload jsonb`
+  - `created_at timestamptz default now()`
 - [x] Create `speed_benchmarks` table for aggregate comparison data.
 - [x] Create `demo_sessions` table for hackathon demo runs.
 - [x] Add indexes for incident lookups and agent run history.
@@ -226,6 +234,7 @@ Verification note:
   - Creating an incident.
   - Saving evidence.
   - Creating/updating agent run records.
+  - Saving per-agent state-transition event records.
   - Loading a full incident dashboard.
   - Saving speed benchmark data.
 - [x] Add a local fallback only if explicitly marked as a demo fallback. Do not present fallback data as persisted production data.
@@ -240,11 +249,13 @@ Verification note:
 - Added lazy server-only Supabase admin client in `src/lib/db/supabase.ts`.
 - Added `src/lib/db/queries.ts` functions for incident creation, evidence saving, agent-run saving, full incident loading, incident evidence reconstruction, and speed benchmark saving.
 - Full incident loading now also retrieves saved `speed_benchmarks` rows, so aggregate Cerebras speed data is not write-only after persistence.
+- Full incident loading now also retrieves saved `agent_events` rows, so persisted dashboards can show how many state-transition audit events were stored for the incident.
 - Added `listIncidentSummaries` for stored incident history, including evidence, agent-run, and speed-benchmark counts for each persisted incident.
 - Extracted dashboard record reconstruction into `src/lib/dashboard/record.ts` so the server dashboard page and tests use the same package-building path.
 - No unconfigured local fallback is used. If Supabase is not configured, `/api/agents/run` reports `persistence.enabled: false` while still running the live AI path; `/api/incidents` returns HTTP 503 instead of pretending persistence succeeded.
 - Added opt-in local deterministic agent mode through `OPSVERSE_LOCAL_AGENT_MODE=enabled`. It runs the same API/UI package path, is labeled as `local_demo`, derives outputs from submitted evidence, stores no provider metrics, and is documented as not live Gemma/Cerebras execution.
 - Added per-agent completion persistence for configured Supabase runs. `/api/agents/run` and `/api/agents/stream` now call `saveAgentRun` from the orchestrator `agent_completed` event path, so completed and failed agent rows are written as each agent finishes instead of waiting for one final batch insert. The stream route also emits a `persistence_error` event if saving an agent row fails.
+- Added per-agent event audit persistence for configured Supabase runs. `/api/agents/run` and `/api/agents/stream` now save `agent_started` and `agent_completed` events into `agent_events`; the post-run persistence panel, incident history API, `/dashboard`, and `/dashboard/[id]` expose saved event counts instead of hiding whether state-transition audit rows were stored.
 - Added persisted incident status lifecycle updates. When Supabase persistence is configured, both JSON and SSE swarm routes update the incident row to `running` before orchestration and then to `completed` or `failed` after the final package is built. Fatal route errors after an incident id exists now make a best-effort `failed` status update so persisted dashboards do not stay stuck in `running`.
 - Added a post-run Dashboard persistence panel in the intake UI. It is driven by the actual route `persistence` response and shows whether the run has a durable dashboard URL, the exact refreshable URL with copy/open actions, the incident id, saved agent-row count, saved benchmark state, and any persistence error instead of leaving refreshability implicit.
 - `npm run typecheck` and `npm run lint` passed after the DB layer was added.
@@ -255,6 +266,7 @@ Verification note:
 - After hardening fatal route errors to mark persisted incidents `failed`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 - After loading saved speed benchmark rows into the persisted dashboard/API path, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 - After adding persisted incident history listing through `GET /api/incidents` and `/dashboard`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `git diff --check`, and local HTTP smoke on `127.0.0.1:3005` passed without API-key-required checks. The HTTP smoke confirmed missing Supabase env values return HTTP 503 from `/api/incidents` and `/dashboard` renders `Incident history unavailable` instead of fake stored incidents.
+- After adding Supabase-backed `agent_events` audit persistence and surfacing event counts in the intake persistence panel, incident history API, `/dashboard`, and `/dashboard/[id]`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and local HTTP smoke on `127.0.0.1:3005` passed without API-key-required checks. The HTTP smoke confirmed missing Supabase env values still return HTTP 503 from `/api/incidents` and `/dashboard` still renders `Incident history unavailable` instead of fake event data. `npm run verify:ui` was attempted with `UI_SMOKE_BASE_URL=http://127.0.0.1:3005`, including an escalated retry, but Chrome did not expose a DevTools port in this environment.
 
 ---
 
@@ -957,6 +969,7 @@ Verification note:
 - RCA starts only after the evidence-agent `Promise.all` resolves and the orchestrator has collected Vision, Log, API, and DB outputs/failures.
 - Updated the orchestrator so `test_agent` and `release_agent` both emit `agent_started` after RCA completes and then run inside one `Promise.all`.
 - Configured persistence now saves every `agent_completed` event via `saveAgentRun` in both JSON and SSE swarm routes, including failed dependency rows. This implements per-agent row persistence in code, but remains `[~]` until a real Supabase environment verifies the live write/read path.
+- Configured persistence now also saves `agent_started` and `agent_completed` audit rows via `saveAgentEvent` in both JSON and SSE swarm routes. The persistence result reports saved event counts, and persisted dashboard/history surfaces expose those counts, but the item remains `[~]` until a real Supabase environment verifies the live write/read path.
 - Updated the Release Risk agent prompt to use RCA, API analysis, and DB analysis directly, because regression tests now run in parallel instead of before release risk.
 - Narrator remains gated on both Regression Test and Release Risk completion.
 - `npm run typecheck` and `npm run lint` passed after the release-agent contract change.
