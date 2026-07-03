@@ -468,9 +468,11 @@ Verification note:
 - Added `src/components/result-tabs.tsx`, `src/components/jira-output.tsx`, `src/components/release-gate.tsx`, and `src/app/dashboard/[id]/page.tsx`.
 - The intake flow renders the same result tabs directly from the `/api/agents/run` response.
 - `/dashboard/[id]` loads persisted evidence and saved agent runs from Supabase when configured; when Supabase is missing it shows a visible dashboard error instead of fake stored output.
+- `/dashboard/[id]` now renders a persisted operational summary from the loaded Supabase row: incident status, module, saved agent-run count, and created time.
 - Refresh persistence is build-verified but not live-verified because valid Supabase env values are not configured in this environment.
 - `tests/dashboard-record.test.ts` verifies the same reconstruction used by `/dashboard/[id]` preserves persisted evidence, saved outputs, failed runs, metrics, and `time_info` after a simulated refresh.
 - HTTP smoke verified `/dashboard/00000000-0000-0000-0000-000000000000` renders `Dashboard unavailable` with the Supabase configuration error when persistence is not configured.
+- After adding the persisted dashboard operational summary, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run verify:secrets`, `npm audit --audit-level=moderate`, and `npm run verify:ui` passed without API-key-required checks.
 
 ### 6.5 Speed Comparison Page
 

@@ -19,6 +19,11 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
   try {
     const record = await loadFullIncidentDashboard(id);
     const result = dashboardRecordToFinalPackage(record);
+    const createdAt = new Intl.DateTimeFormat("en", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }).format(new Date(record.incident.created_at));
 
     return (
       <main className="min-h-screen bg-[#f7f7f2] text-[#161616]">
@@ -37,6 +42,36 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
               Persisted incident `{id}` loaded from Supabase. The panels below
               render saved evidence and saved agent outputs only.
             </p>
+            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-4">
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Status
+                </dt>
+                <dd className="mt-1 font-mono text-[#f4c95d]">
+                  {record.incident.status}
+                </dd>
+              </div>
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Module
+                </dt>
+                <dd className="mt-1 truncate font-mono">
+                  {record.incident.module ?? "unknown"}
+                </dd>
+              </div>
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Saved runs
+                </dt>
+                <dd className="mt-1 font-mono">{record.agentRuns.length}</dd>
+              </div>
+              <div className="rounded border border-[#3d3d36] bg-[#1c1c1a] p-3">
+                <dt className="text-xs font-semibold uppercase text-[#a9a695]">
+                  Created
+                </dt>
+                <dd className="mt-1 font-mono">{createdAt} UTC</dd>
+              </div>
+            </dl>
           </div>
         </section>
 

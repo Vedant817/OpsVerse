@@ -33,6 +33,7 @@ The project is built for Gemma 4 31B on Cerebras. The current `.env.example` use
 - Persist completed and failed agent rows as each agent finishes when Supabase is configured.
 - Update persisted incident status through `running`, `completed`, and `failed` lifecycle states when Supabase is configured, including best-effort `failed` status on fatal route errors.
 - Show post-run dashboard persistence state, saved agent-row count, saved benchmark state, and the exact durable dashboard URL with copy/open actions when Supabase returns one.
+- Render persisted dashboard status, module, saved run count, and created time from the loaded Supabase row.
 - Show a clear dashboard configuration error when Supabase is not configured.
 
 No static RCA/Jira/test/release answer is pasted into the app as if it came from AI. Sample data is synthetic and only seeds the same runtime path used by manual evidence.
